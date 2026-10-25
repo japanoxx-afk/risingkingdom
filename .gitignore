@@ -3,3 +3,5 @@ reports/
 packages/
 *.user
 *.log
+__pycache__/
+*.pyc

@@ -38,6 +38,7 @@ public class Pak {
 public class PatchFile { public string Path; public string OriginalSha256; public string PatchedSha256; }
 public class Manifest {
     public int Schema; public string Version; public bool Complete; public bool KoreanFontVerified;
+    public string Scope; public string TranslationMethod; public bool FontFormatVerified; public bool RuntimeVerified;
     public int TranslatedStrings; public int TotalStrings; public List<PatchFile> Files;
 }
 public class Backup { public string Game; public List<PatchFile> Files; }
@@ -62,9 +63,9 @@ public static class Engine {
     }
     public static string State(string game) { return Child(game,".risingkingdom-ko"); }
     public static Manifest LoadPackage(string package) {
-        if(!File.Exists(System.IO.Path.Combine(package,"manifest.json"))) throw new InvalidDataException("한글 번역 패키지가 없습니다. 현재 런처에는 전체 번역 및 한글 APF 글꼴이 포함되어 있지 않습니다.");
+        if(!File.Exists(System.IO.Path.Combine(package,"manifest.json"))) throw new InvalidDataException("한글 번역 패키지가 없습니다. 텍스트 패치를 먼저 생성하세요.");
         var m=Json.Deserialize<Manifest>(File.ReadAllText(System.IO.Path.Combine(package,"manifest.json"),Encoding.UTF8));
-        if(m==null || m.Schema!=1 || String.IsNullOrWhiteSpace(m.Version) || !m.Complete || !m.KoreanFontVerified || m.TotalStrings<=0 || m.TranslatedStrings!=m.TotalStrings || m.Files==null || m.Files.Count==0) throw new InvalidDataException("전체 번역과 한글 글꼴 검증이 완료된 패치 패키지가 아닙니다.");
+        if(m==null || m.Schema!=1 || String.IsNullOrWhiteSpace(m.Version) || (!(m.Complete&&m.KoreanFontVerified) && !(m.Scope=="game-text"&&m.FontFormatVerified)) || m.TotalStrings<=0 || m.TranslatedStrings!=m.TotalStrings || m.Files==null || m.Files.Count==0) throw new InvalidDataException("번역 또는 한글 글꼴 형식 검증이 완료된 패치 패키지가 아닙니다.");
         var seen=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach(var f in m.Files) {
             if(f==null || String.IsNullOrEmpty(f.Path)) throw new InvalidDataException("잘못된 파일 항목");
@@ -139,7 +140,8 @@ public static class Engine {
         }
         File.WriteAllText(System.IO.Path.Combine(output,"inventory.json"),Json.Serialize(inventory),Encoding.UTF8);
         File.WriteAllText(System.IO.Path.Combine(output,"translation-catalog.json"),Json.Serialize(catalog),Encoding.UTF8);
-        log("번역 조사 자료 저장: "+output); log("캠페인 BFHP 내부, 이미지 속 영문, APF 한글 표시 지원은 별도 검증이 필요합니다.");
+        File.WriteAllText(System.IO.Path.Combine(output,"campaign-catalog.json"),Json.Serialize(Campaign.Inspect(game,log)),Encoding.UTF8);
+        log("번역 조사 자료 저장: "+output); log("이미지 속 영문·EXE 내장 문구·사용자 맵은 조사 범위에서 제외됩니다.");
     }
 }
 public class Launcher : Form {
@@ -151,12 +153,15 @@ public class Launcher : Form {
         layout.Controls.Add(new Label {Text="한글패치 관리 · 원본 백업 · 복원",AutoSize=true});
         layout.Controls.Add(new Label {Text="게임 설치 폴더",AutoSize=true});
         game.Text=@"C:\Program Files (x86)\Steam\steamapps\common\Rising Kingdoms"; layout.Controls.Add(PathRow(game));
-        layout.Controls.Add(new Label {Text="검증된 한글패치 패키지 폴더 (manifest.json 포함)",AutoSize=true});
+        layout.Controls.Add(new Label {Text="텍스트 패키지 폴더 (첫 적용 시 설치본에서 자동 생성)",AutoSize=true});
         package.Text=System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"packages","ko"); layout.Controls.Add(PathRow(package));
-        status.AutoSize=true; status.MaximumSize=new Size(700,0); status.Text="번역 패키지 미포함 · 전체 한글화 미완료\n게임 번역과 APF 한글 글꼴 검증이 완료된 패키지가 필요합니다."; status.ForeColor=Color.FromArgb(240,193,106); layout.Controls.Add(status);
+        status.AutoSize=true; status.MaximumSize=new Size(700,0); status.Text="텍스트 한글패치 · 기계번역 초안 + 메뉴·기술명 보정\n메뉴·설명·캠페인 대사·튜토리얼 텍스트 / 실제 게임 화면 미검수"; status.ForeColor=Color.FromArgb(240,193,106); layout.Controls.Add(status);
         var buttons=new FlowLayoutPanel {AutoSize=true,Dock=DockStyle.Fill}; layout.Controls.Add(buttons);
         AddButton(buttons,"설치본 조사",()=>Engine.Inspect(game.Text,System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"reports"),Log));
-        AddButton(buttons,"한글패치 적용",()=>{Engine.Install(game.Text,package.Text,Log); status.Text="패치 적용 완료";});
+        AddButton(buttons,"한글패치 적용",()=>{
+            if(!File.Exists(System.IO.Path.Combine(package.Text,"manifest.json")))TextPatch.Build(game.Text,System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"translations","ko.json"),package.Text,Log);
+            var manifest=Engine.LoadPackage(package.Text);Engine.Install(game.Text,package.Text,Log);status.Text="텍스트 패치 적용 완료 · "+manifest.TranslatedStrings+"개 키\n기계번역 초안 / 실제 게임 화면 미검수";
+        });
         AddButton(buttons,"원본 복원",()=>{Engine.Restore(game.Text,Log); status.Text="원본 복원 완료";});
         AddButton(buttons,"게임 실행",()=>{Engine.ValidateGame(game.Text); if(Directory.Exists(Engine.State(game.Text))&&!File.Exists(System.IO.Path.Combine(Engine.State(game.Text),"installed"))) throw new IOException("중단된 패치 기록이 있습니다. 먼저 원본 복원을 실행하세요."); Process.Start(new ProcessStartInfo(System.IO.Path.Combine(game.Text,"RK.exe")) {WorkingDirectory=game.Text,UseShellExecute=true});});
         log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical; log.Dock=DockStyle.Fill; log.BackColor=Color.FromArgb(16,20,28); log.ForeColor=Color.Gainsboro; layout.Controls.Add(log);
@@ -169,6 +174,9 @@ public class Launcher : Form {
     [STAThread] public static int Main(string[] args) {
         try {
             if(args.Length==3 && args[0]=="--inspect") {Engine.Inspect(args[1],args[2],Console.WriteLine);return 0;}
+            if(args.Length==4 && args[0]=="--build-text") {TextPatch.Build(args[1],args[2],args[3],Console.WriteLine);return 0;}
+            if(args.Length==3 && args[0]=="--apply") {Engine.Install(args[1],args[2],Console.WriteLine);return 0;}
+            if(args.Length==2 && args[0]=="--restore") {Engine.Restore(args[1],Console.WriteLine);return 0;}
             if(args.Length==1 && args[0]=="--self-test") {SelfTest.Run();return 0;}
             if(args.Length==2 && args[0]=="--preview") {Application.EnableVisualStyles(); using(var form=new Launcher()) {form.Show(); Application.DoEvents(); using(var bitmap=new Bitmap(form.Width,form.Height)) {form.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(args[1]);} form.Close();}return 0;}
             Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false); Application.Run(new Launcher());return 0;
@@ -191,6 +199,8 @@ public static class SelfTest {
         File.WriteAllText(original,"external update");Reject(()=>Engine.Restore(game,s=>{}));Check(File.ReadAllText(original)=="external update","외부 변경 보존");File.WriteAllText(original,"translated");
         Engine.Restore(game,s=>{});Check(File.ReadAllText(original)=="original","복원");
         Engine.Install(game,pack,s=>{});File.Delete(System.IO.Path.Combine(Engine.State(game),"installed"));Engine.Restore(game,s=>{});Check(File.ReadAllText(original)=="original","중단 복구");
+        TextPatch.CheckTokens("Attack %s1 #GetClassInt('A','B')# @A","공격 %s1 #GetClassInt('A','B')# (@A)");
+        Reject(()=>TextPatch.CheckTokens("Damage %s1","피해 %s2"));Reject(()=>TextPatch.CheckTokens("@Attack","공격"));Reject(()=>TextPatch.CheckTokens("Damage #GetClassInt('A','B')#","피해 100"));
         File.WriteAllText(System.IO.Path.Combine(root,"PASS.txt"),"PASS: install, restore, interrupted recovery, traversal, incomplete package, corruption, external changes");
         Console.WriteLine("PASS: "+root);
     }
