@@ -242,7 +242,7 @@ public class Launcher : Form {
             }else {ScreenFill.Disable(root);Log("화면 확대 해제 · 기본 게임 화면으로 실행합니다.");}
             DateTime started=DateTime.UtcNow;
             using(var scaling=DisplayScaling.Capture(mode))
-            using(var process=Process.Start(new ProcessStartInfo(System.IO.Path.Combine(root,"RK.exe")){WorkingDirectory=root,UseShellExecute=false})) {
+            using(var process=NativeGame.Start(root,Log)) {
                 Log("게임 실행 · 종료 상태와 크래시 로그를 확인합니다.");
                 try{Log(await GameWindowMode.Configure(process,mode));if(mode=="fullscreen"){Log(scaling.Stretch());scaling.Watch(process.Id,Log);}}catch(Exception ex){Log("화면 모드 적용 실패: "+ex.Message);MessageBox.Show(this,"선택한 화면 모드를 적용하지 못했습니다.\n"+ex.Message,"화면 모드 적용 실패",MessageBoxButtons.OK,MessageBoxIcon.Warning);}
                 await System.Threading.Tasks.Task.Run(()=>process.WaitForExit());if(IsDisposed)return;
@@ -262,7 +262,7 @@ public class Launcher : Form {
             if(args.Length==3 && args[0]=="--apply") {Engine.Install(args[1],args[2],Console.WriteLine);return 0;}
             if(args.Length==2 && args[0]=="--restore") {Engine.ValidateGame(args[1]);ScreenFill.Disable(args[1]);Engine.Restore(args[1],Console.WriteLine);return 0;}
             if(args.Length==1 && args[0]=="--display-info"){Console.WriteLine(DisplayScaling.Inspect());return 0;}
-            if(args.Length==3 && args[0]=="--run-mode") {Engine.ValidateGame(args[1]);if(args[2]!="native")ScreenFill.Download();ScreenFill.Enable(args[1],args[2]);using(var scaling=DisplayScaling.Capture(args[2]))using(var process=Process.Start(new ProcessStartInfo(System.IO.Path.Combine(args[1],"RK.exe")){WorkingDirectory=args[1],UseShellExecute=false})){Console.WriteLine(GameWindowMode.Configure(process,args[2]).GetAwaiter().GetResult());if(args[2]=="fullscreen"){Console.WriteLine(scaling.Stretch());scaling.Watch(process.Id,Console.WriteLine);}process.WaitForExit();return process.ExitCode;}}
+            if(args.Length==3 && args[0]=="--run-mode") {Engine.ValidateGame(args[1]);if(args[2]!="native")ScreenFill.Download();ScreenFill.Enable(args[1],args[2]);using(var scaling=DisplayScaling.Capture(args[2]))using(var process=NativeGame.Start(args[1],Console.WriteLine)){Console.WriteLine(GameWindowMode.Configure(process,args[2]).GetAwaiter().GetResult());if(args[2]=="fullscreen"){Console.WriteLine(scaling.Stretch());scaling.Watch(process.Id,Console.WriteLine);}process.WaitForExit();return process.ExitCode;}}
             if(args.Length==3 && args[0]=="--screen-mode") {Engine.ValidateGame(args[1]);if(args[2]!="native")ScreenFill.Download();ScreenFill.Enable(args[1],args[2]);return 0;}
             if(args.Length==3 && args[0]=="--screen-fill") {Engine.ValidateGame(args[1]);if(args[2]=="on"){ScreenFill.Download();ScreenFill.Enable(args[1]);}else if(args[2]=="off")ScreenFill.Disable(args[1]);else throw new ArgumentException("on/off 필요");return 0;}
             if(args.Length==1 && args[0]=="--self-test") {SelfTest.Run();return 0;}
@@ -285,6 +285,7 @@ public static class SelfTest {
         GameWindowMode.SelfTest();
         DisplayScaling.SelfTest();
         NativeLocalization.SelfTest();
+        NativeGame.SelfTest();
         string root=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"rkko-test-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
         string game=System.IO.Path.Combine(root,"game"), pack=System.IO.Path.Combine(root,"pack"); Directory.CreateDirectory(System.IO.Path.Combine(game,"Packs")); Directory.CreateDirectory(System.IO.Path.Combine(pack,"files","Packs"));
         File.WriteAllText(System.IO.Path.Combine(game,"RK.exe"),"fixture"); string original=System.IO.Path.Combine(game,"Packs","data.pak"), changed=System.IO.Path.Combine(pack,"files","Packs","data.pak"); File.WriteAllText(original,"original"); File.WriteAllText(changed,"translated");

@@ -58,6 +58,8 @@ class TerminologyTests(unittest.TestCase):
         for id in ['1783994', '1778642', '1767414', '1759051']:
             self.assertIn(id, state['EngineEntries'])
             self.assertRegex(state['Entries'][id]['Korean'], '[가-힣]')
+        for id, maximum in [('1783994', '7'), ('1767414', '100'), ('1759051', '3000')]:
+            self.assertIn('최대 보유량: ' + maximum, state['Entries'][id]['Korean'])
         self.assertEqual(len(state['EngineEntries']), len(set(state['EngineEntries'])))
 
 
