@@ -65,14 +65,14 @@ public static class ScreenFill {
         }
     }
     static string BytesHash(byte[] bytes) {using(var h=System.Security.Cryptography.SHA256.Create())return BitConverter.ToString(h.ComputeHash(bytes)).Replace("-","").ToLowerInvariant();}
-    static byte[] WindowedConfig(byte[] bytes) {
+    static byte[] WindowedConfig(byte[] bytes,bool fullscreen=false) {
         if(bytes.Length>1024*1024||bytes.Contains((byte)0))throw new InvalidDataException("지원하지 않는 config.ini 형식");
         string text=Encoding.GetEncoding(1252).GetString(bytes);
         var section=System.Text.RegularExpressions.Regex.Match(text,@"(?ims)^[ \t]*\[system\][^\r\n]*(?:\r?\n)(.*?)(?=^[ \t]*\[|\z)");
         if(!section.Success)throw new InvalidDataException("config.ini에 system 섹션이 없습니다.");
         var key=new System.Text.RegularExpressions.Regex(@"(?im)^([ \t]*Fullscreen[ \t]*=[ \t]*)[01]([ \t]*(?:;[^\r\n]*)?\r?$)");
         if(key.Matches(section.Value).Count!=1)throw new InvalidDataException("config.ini의 Fullscreen 설정을 확인하세요.");
-        string changed=key.Replace(section.Value,"${1}0${2}");
+        string changed=key.Replace(section.Value,"${1}"+(fullscreen?"1":"0")+"${2}");
         // Intro video resets the native window after the wrapper has scaled it.
         var splash=new System.Text.RegularExpressions.Regex(@"(?im)^([ \t]*NoSplash[ \t]*=[ \t]*)[01]([ \t]*(?:;[^\r\n]*)?\r?$)");
         if(splash.Matches(changed).Count==1)changed=splash.Replace(changed,"${1}1${2}");
@@ -80,10 +80,10 @@ public static class ScreenFill {
         else changed=changed.TrimEnd('\r','\n')+"\r\nNoSplash=1\r\n";
         return Encoding.GetEncoding(1252).GetBytes(text.Substring(0,section.Index)+changed+text.Substring(section.Index+section.Length));
     }
-    static void Install(string root,byte[][] libraries,string config) {
+    static void Install(string root,byte[][] libraries,string config,bool fullscreen=false) {
         Disable(root);
         foreach(string name in Names)if(File.Exists(Engine.Child(root,name)))throw new IOException("기존 그래픽 모드가 있어 덮어쓰지 않습니다: "+name+". 화면 꽉 채우기를 끄거나 기존 모드를 별도로 보관하세요.");
-        string gameConfig=Engine.Child(root,"config.ini");byte[] original=File.ReadAllBytes(gameConfig),patched=WindowedConfig(original);
+        string gameConfig=Engine.Child(root,"config.ini");byte[] original=File.ReadAllBytes(gameConfig),patched=WindowedConfig(original,fullscreen);
         byte[][] content=libraries.Concat(new[]{Encoding.ASCII.GetBytes(config)}).ToArray();
         var receipt=new ScreenReceipt {Files=new PatchFile[Names.Length],ConfigOriginal=Convert.ToBase64String(original),ConfigOriginalSha256=BytesHash(original),ConfigPatchedSha256=BytesHash(patched)};
         for(int i=0;i<Names.Length;i++)receipt.Files[i]=new PatchFile {Path=Names[i],PatchedSha256=BytesHash(content[i])};
@@ -102,7 +102,7 @@ public static class ScreenFill {
         if(!ValidMode(mode))throw new ArgumentException("지원하지 않는 화면 모드");
         if(mode=="native"){Disable(root);return;}
         var screen=System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-        Install(root,ReadLibraries(Archive),MakeConfig(screen.Width,screen.Height,mode));
+        Install(root,ReadLibraries(Archive),MakeConfig(screen.Width,screen.Height,mode),mode=="fullscreen");
     }
     public static void Disable(string root) {
         if(!File.Exists(Receipt(root)))return;
@@ -110,7 +110,7 @@ public static class ScreenFill {
         if(receipt==null)throw new InvalidDataException("화면 확대 복구 기록이 없습니다.");
         ValidateOwned(root,receipt.Files);
         byte[] original=Convert.FromBase64String(receipt.ConfigOriginal);
-        if(BytesHash(original)!=receipt.ConfigOriginalSha256||BytesHash(WindowedConfig(original))!=receipt.ConfigPatchedSha256)throw new InvalidDataException("화면 설정 백업 검증 실패");
+        if(BytesHash(original)!=receipt.ConfigOriginalSha256||(BytesHash(WindowedConfig(original))!=receipt.ConfigPatchedSha256&&BytesHash(WindowedConfig(original,true))!=receipt.ConfigPatchedSha256))throw new InvalidDataException("화면 설정 백업 검증 실패");
         string config=Engine.Child(root,"config.ini"),current=Engine.Hash(config);
         if(current!=receipt.ConfigOriginalSha256&&current!=receipt.ConfigPatchedSha256)throw new IOException("외부에서 변경한 config.ini를 보존합니다. 화면 확대 기록을 확인하세요.");
         if(current!=receipt.ConfigOriginalSha256) {
@@ -126,12 +126,16 @@ public static class ScreenFill {
         try {
             string initial="[system]\r\nFullscreen=1\r\nWindowX=1024\r\n[Other]\r\nKeep=unchanged\r\n";
             File.WriteAllText(Path.Combine(root,"config.ini"),initial,Encoding.ASCII);
+            if(!Encoding.ASCII.GetString(WindowedConfig(Encoding.ASCII.GetBytes(initial),true)).Contains("Fullscreen=1")||!Encoding.ASCII.GetString(WindowedConfig(Encoding.ASCII.GetBytes(initial))).Contains("Fullscreen=0"))throw new Exception("엔진 전체 화면 설정 구분 실패");
             string config=MakeConfig(1920,1080);
             if(!Encoding.ASCII.GetString(WindowedConfig(Encoding.ASCII.GetBytes(initial))).Contains("NoSplash=1"))throw new Exception("시작 영상 충돌 방지 실패");
             if(!config.Contains("DesktopResolution = 1920x1080")||!config.Contains("ScalingMode = stretched"))throw new Exception("화면 설정 생성 실패");
             string windowed=MakeConfig(1920,1080,"windowed");
             if(!windowed.Contains("FullScreenMode = false")||!windowed.Contains("DisableAltEnterToToggleScreenMode = true"))throw new Exception("화면 모드 전환 설정 실패");
-            byte[] fake={1,2,3};Install(root,new[]{fake,fake,fake},config);Install(root,new[]{fake,fake,fake},config);Disable(root);
+            byte[] fake={1,2,3};
+            Install(root,new[]{fake,fake,fake},config,true);Disable(root);
+            if(File.ReadAllText(Path.Combine(root,"config.ini"))!=initial)throw new Exception("전체 화면 설정 복원 실패");
+            Install(root,new[]{fake,fake,fake},config);Install(root,new[]{fake,fake,fake},config);Disable(root);
             if(Names.Any(n=>File.Exists(Path.Combine(root,n)))||File.Exists(Receipt(root)))throw new Exception("화면 설정 복원 실패");
             if(File.ReadAllText(Path.Combine(root,"config.ini"))!=initial)throw new Exception("게임 설정 원본 복원 실패");
             File.WriteAllText(Path.Combine(root,Names[0]),"existing");

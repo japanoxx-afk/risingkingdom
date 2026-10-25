@@ -184,6 +184,7 @@ public class Launcher : Form {
         log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical; log.Dock=DockStyle.Fill; log.BackColor=Color.FromArgb(16,20,28); log.ForeColor=Color.Gainsboro; layout.Controls.Add(log);
         layout.RowStyles.Clear(); for(int i=0;i<9;i++)layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));
         layout.Controls.Add(new Label {Text="쓰기 권한 오류가 나면 런처를 관리자 권한으로 실행하세요.",AutoSize=true});
+        FormClosing+=(s,e)=>{if(gameRunning){e.Cancel=true;Hide();}};
         if(automaticUpdates) {
             Shown+=async(s,e)=>{
                 try {
@@ -217,29 +218,31 @@ public class Launcher : Form {
                 Log("화면 꽉 채우기 준비 · 공식 dgVoodoo 2.87.5 확인 (첫 사용 시 약 9 MB)");
                 await System.Threading.Tasks.Task.Run(()=>ScreenFill.Download());
                 if(IsDisposed)return;Engine.ValidateGame(root);ScreenFill.Enable(root,mode);
-                Log("화면 모드 적용: "+screenMode.SelectedItem+" · 모드 변경은 게임 재실행 시 적용");
+                Log("요청한 화면 모드: "+screenMode.SelectedItem+" · 모드 변경은 게임 재실행 시 적용");
             }else {ScreenFill.Disable(root);Log("화면 확대 해제 · 기본 게임 화면으로 실행합니다.");}
             DateTime started=DateTime.UtcNow;
+            using(var scaling=DisplayScaling.Capture(mode))
             using(var process=Process.Start(new ProcessStartInfo(System.IO.Path.Combine(root,"RK.exe")){WorkingDirectory=root,UseShellExecute=false})) {
                 Log("게임 실행 · 종료 상태와 크래시 로그를 확인합니다.");
-                try{await GameWindowMode.Configure(process,mode);}catch(Exception ex){Log("화면 모드 적용 오류: "+ex.Message);}
+                try{Log(await GameWindowMode.Configure(process,mode));if(mode=="fullscreen"){Log(scaling.Stretch());scaling.Watch(process.Id,Log);}}catch(Exception ex){Log("화면 모드 적용 실패: "+ex.Message);MessageBox.Show(this,"선택한 화면 모드를 적용하지 못했습니다.\n"+ex.Message,"화면 모드 적용 실패",MessageBoxButtons.OK,MessageBoxIcon.Warning);}
                 await System.Threading.Tasks.Task.Run(()=>process.WaitForExit());if(IsDisposed)return;
                 string error=GameMonitor.Failure(root,started,process.ExitCode);
                 if(error!=null){Log(error);MessageBox.Show(this,error,"게임 비정상 종료 감지",MessageBoxButtons.OK,MessageBoxIcon.Warning);}else Log("게임 종료 · 종료 코드 "+process.ExitCode);
             }
         }catch(Exception ex){if(!IsDisposed){Log("게임 실행 오류: "+ex.Message);MessageBox.Show(this,ex.Message,"게임 실행",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
-        finally{gameRunning=false;if(!IsDisposed){buttons.Enabled=true;screenMode.Enabled=true;game.Enabled=true;}}
+        finally{gameRunning=false;if(!IsDisposed){buttons.Enabled=true;screenMode.Enabled=true;game.Enabled=true;if(!Visible)Close();}}
     }
     Control PathRow(TextBox box) { var panel=new TableLayoutPanel {ColumnCount=2,Dock=DockStyle.Top,AutoSize=true}; panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,80)); box.Dock=DockStyle.Fill; panel.Controls.Add(box); var browse=new Button {Text="찾아보기",AutoSize=true}; browse.Click+=(s,e)=>{using(var d=new FolderBrowserDialog()){d.SelectedPath=box.Text; if(d.ShowDialog()==DialogResult.OK)box.Text=d.SelectedPath;}}; panel.Controls.Add(browse); return panel; }
     void AddButton(FlowLayoutPanel p,string text,Action action) { var b=new Button {Text=text,AutoSize=true,Height=36,BackColor=Color.FromArgb(51,65,83),FlatStyle=FlatStyle.Flat}; b.Click+=(s,e)=>{UseWaitCursor=true; b.Enabled=false; try{action();}catch(Exception ex){Log("오류: "+ex.Message); MessageBox.Show(this,ex.Message,"작업을 완료하지 못했습니다",MessageBoxButtons.OK,MessageBoxIcon.Warning);}finally{UseWaitCursor=false;b.Enabled=true;}}; p.Controls.Add(b); }
-    void Log(string line) { if(IsDisposed||log.IsDisposed)return;log.AppendText(DateTime.Now.ToString("HH:mm:ss")+"  "+line+Environment.NewLine); log.Refresh(); }
+    void Log(string line) { if(IsDisposed||log.IsDisposed)return;if(InvokeRequired){try{BeginInvoke(new Action<string>(Log),line);}catch(InvalidOperationException){}return;}log.AppendText(DateTime.Now.ToString("HH:mm:ss")+"  "+line+Environment.NewLine); log.Refresh(); }
     [STAThread] public static int Main(string[] args) {
         try {
             if(args.Length==3 && args[0]=="--inspect") {Engine.Inspect(args[1],args[2],Console.WriteLine);return 0;}
             if(args.Length==4 && args[0]=="--build-text") {TextPatch.Build(args[1],args[2],args[3],Console.WriteLine);return 0;}
             if(args.Length==3 && args[0]=="--apply") {Engine.Install(args[1],args[2],Console.WriteLine);return 0;}
             if(args.Length==2 && args[0]=="--restore") {Engine.ValidateGame(args[1]);ScreenFill.Disable(args[1]);Engine.Restore(args[1],Console.WriteLine);return 0;}
-            if(args.Length==3 && args[0]=="--run-mode") {Engine.ValidateGame(args[1]);if(args[2]!="native")ScreenFill.Download();ScreenFill.Enable(args[1],args[2]);using(var process=Process.Start(new ProcessStartInfo(System.IO.Path.Combine(args[1],"RK.exe")){WorkingDirectory=args[1],UseShellExecute=false})){GameWindowMode.Configure(process,args[2]).GetAwaiter().GetResult();process.WaitForExit();return process.ExitCode;}}
+            if(args.Length==1 && args[0]=="--display-info"){Console.WriteLine(DisplayScaling.Inspect());return 0;}
+            if(args.Length==3 && args[0]=="--run-mode") {Engine.ValidateGame(args[1]);if(args[2]!="native")ScreenFill.Download();ScreenFill.Enable(args[1],args[2]);using(var scaling=DisplayScaling.Capture(args[2]))using(var process=Process.Start(new ProcessStartInfo(System.IO.Path.Combine(args[1],"RK.exe")){WorkingDirectory=args[1],UseShellExecute=false})){Console.WriteLine(GameWindowMode.Configure(process,args[2]).GetAwaiter().GetResult());if(args[2]=="fullscreen"){Console.WriteLine(scaling.Stretch());scaling.Watch(process.Id,Console.WriteLine);}process.WaitForExit();return process.ExitCode;}}
             if(args.Length==3 && args[0]=="--screen-mode") {Engine.ValidateGame(args[1]);if(args[2]!="native")ScreenFill.Download();ScreenFill.Enable(args[1],args[2]);return 0;}
             if(args.Length==3 && args[0]=="--screen-fill") {Engine.ValidateGame(args[1]);if(args[2]=="on"){ScreenFill.Download();ScreenFill.Enable(args[1]);}else if(args[2]=="off")ScreenFill.Disable(args[1]);else throw new ArgumentException("on/off 필요");return 0;}
             if(args.Length==1 && args[0]=="--self-test") {SelfTest.Run();return 0;}
@@ -259,6 +262,8 @@ public static class SelfTest {
         RuntimeContracts.SelfTest();
         GameMonitor.SelfTest();
         ScreenFill.SelfTest();
+        GameWindowMode.SelfTest();
+        DisplayScaling.SelfTest();
         string root=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"rkko-test-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
         string game=System.IO.Path.Combine(root,"game"), pack=System.IO.Path.Combine(root,"pack"); Directory.CreateDirectory(System.IO.Path.Combine(game,"Packs")); Directory.CreateDirectory(System.IO.Path.Combine(pack,"files","Packs"));
         File.WriteAllText(System.IO.Path.Combine(game,"RK.exe"),"fixture"); string original=System.IO.Path.Combine(game,"Packs","data.pak"), changed=System.IO.Path.Combine(pack,"files","Packs","data.pak"); File.WriteAllText(original,"original"); File.WriteAllText(changed,"translated");
