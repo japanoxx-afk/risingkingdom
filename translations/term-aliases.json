@@ -1,0 +1,332 @@
+{
+  "Champion": [
+    "영웅"
+  ],
+  "Champions": [
+    "영웅"
+  ],
+  "Forester": [
+    "포레스터"
+  ],
+  "Foresters": [
+    "포레스터"
+  ],
+  "Soulmonger": [
+    "영혼 수집가",
+    "소울몽거"
+  ],
+  "Clodhopper": [
+    "흙발 전사",
+    "클로드호퍼"
+  ],
+  "Clodhoppers": [
+    "흙발 전사",
+    "클로드호퍼"
+  ],
+  "Seedkeeper": [
+    "씨앗 수호자",
+    "종자 관리인"
+  ],
+  "Seedkeepers": [
+    "씨앗 수호자",
+    "종자 관리인"
+  ],
+  "Purifier": [
+    "정수기",
+    "정화기"
+  ],
+  "Purifiers": [
+    "정수기",
+    "정화기"
+  ],
+  "Gold Plant": [
+    "금 공장",
+    "금 플랜트"
+  ],
+  "Gold Plants": [
+    "금 공장",
+    "금 플랜트"
+  ],
+  "Gold Deposit": [
+    "금 예금",
+    "금 보증금"
+  ],
+  "Gold Deposits": [
+    "금 예금",
+    "금 보증금"
+  ],
+  "Gem Deposit": [
+    "보석 보증금"
+  ],
+  "Gem Deposits": [
+    "보석 보증금"
+  ],
+  "Dark Rider": [
+    "다크 라이더"
+  ],
+  "Dark Riders": [
+    "다크 라이더"
+  ],
+  "Stoneshaper": [
+    "스톤셰이퍼",
+    "스톤 셰이퍼",
+    "돌구체자"
+  ],
+  "Stoneshapers": [
+    "스톤셰이퍼",
+    "스톤 셰이퍼",
+    "돌구체자"
+  ],
+  "Night Council": [
+    "야간위원회"
+  ],
+  "Temple of Nightfall": [
+    "황혼의 사원",
+    "황혼의 포지 사원"
+  ],
+  "Battle Shrine": [
+    "전투신전",
+    "전투 성지",
+    "전투의 성지"
+  ],
+  "Crystal Spire": [
+    "크리스탈 스파이어",
+    "크리스탈 첨탑"
+  ],
+  "Ember Spire": [
+    "엠버 스파이어",
+    "엠버 첨탑"
+  ],
+  "Red Dragon": [
+    "레드 드래곤"
+  ],
+  "Red Dragons": [
+    "레드 드래곤즈",
+    "레드 드래곤"
+  ],
+  "Spirit of Creation": [
+    "창조의 정신"
+  ],
+  "Magic Market": [
+    "매직마켓",
+    "매직 마켓"
+  ],
+  "Magic House": [
+    "매직하우스",
+    "매직 하우스"
+  ],
+  "Magic Well": [
+    "매직웰",
+    "매직 웰"
+  ],
+  "Moon Obelisk": [
+    "문 오벨리스크",
+    "달 오벨리스크"
+  ],
+  "Ranger": [
+    "레인저"
+  ],
+  "Rangers": [
+    "레인저스",
+    "레인저"
+  ],
+  "Ranger's Tower": [
+    "레인저스 타워",
+    "레인저 타워"
+  ],
+  "Shaman": [
+    "샤먼",
+    "무당"
+  ],
+  "Shamans": [
+    "샤먼",
+    "무당"
+  ],
+  "Wolf Master": [
+    "울프 마스터",
+    "늑대 마스터"
+  ],
+  "Wolf Masters": [
+    "울프 마스터스",
+    "울프 마스터",
+    "늑대 마스터"
+  ],
+  "Sparkling Spy": [
+    "스파클링 스파이",
+    "반짝이는 스파이"
+  ],
+  "Plant Beast": [
+    "플랜트비스트",
+    "식물의 짐승",
+    "식물수"
+  ],
+  "Battle Angel": [
+    "배틀 엔젤"
+  ],
+  "Wind Rider": [
+    "윈드 라이더"
+  ],
+  "Academy of Occult Arts": [
+    "오컬트 예술 아카데미"
+  ],
+  "Crystal Tower": [
+    "크리스탈 타워"
+  ],
+  "Oracle": [
+    "오라클"
+  ],
+  "Squire": [
+    "스콰이어",
+    "종자"
+  ],
+  "Squires": [
+    "스콰이어",
+    "종자"
+  ],
+  "Soul Collector": [
+    "소울 콜렉터",
+    "영혼 수집자"
+  ],
+  "Beastmaster": [
+    "비스트마스터"
+  ],
+  "Mountain Troll": [
+    "마운틴 트롤"
+  ],
+  "Backstab": [
+    "백스탭",
+    "기습"
+  ],
+  "Mind Control": [
+    "마인드 컨트롤",
+    "정신 제어"
+  ],
+  "Sprite's Call": [
+    "스프라이트의 부름",
+    "스프라이트 호출"
+  ],
+  "Blood Feeding": [
+    "수혈"
+  ],
+  "Bloodfeeding": [
+    "수혈"
+  ],
+  "Eagle Eye": [
+    "이글아이"
+  ],
+  "Entangling Shot": [
+    "인탱글링 샷"
+  ],
+  "Splitting Arrows": [
+    "분할 화살표"
+  ],
+  "Corrosive Gas Shot": [
+    "부식성 가스 샷"
+  ],
+  "Frost Shield": [
+    "프로스트 쉴드"
+  ],
+  "Frost Arrows": [
+    "프로스트 애로우"
+  ],
+  "Soul Nova": [
+    "소울 노바",
+    "영혼 폭발"
+  ],
+  "Energy Tide": [
+    "에너지의 물결"
+  ],
+  "Reality Ripple": [
+    "현실의 파동"
+  ],
+  "Fervent Disintegration": [
+    "격렬한 붕괴"
+  ],
+  "Withering Breeze": [
+    "쇠약의 바람"
+  ],
+  "Consume Power": [
+    "힘 흡수"
+  ],
+  "Second Sight": [
+    "천리안"
+  ],
+  "Spirit Chains": [
+    "스피릿 체인"
+  ],
+  "Divine Arts": [
+    "디바인 아츠"
+  ],
+  "Divine Touch": [
+    "디바인 터치"
+  ],
+  "Soul Bond": [
+    "소울 본드"
+  ],
+  "Spring of Life": [
+    "생명의 봄"
+  ],
+  "Gold Spirits": [
+    "금 영혼",
+    "금 정신"
+  ],
+  "Gold Spirit": [
+    "금 영혼",
+    "금 정신"
+  ],
+  "Town Hall": [
+    "시청"
+  ],
+  "Magma Spire": [],
+  "Magma Spires": [],
+  "Crystal Spires": [],
+  "Ember Spires": [],
+  "Werewolf": [],
+  "Werewolves": [],
+  "Knight": [],
+  "Knights": [],
+  "Pikeman": [],
+  "Pikemen": [],
+  "Swordsman": [
+    "검객"
+  ],
+  "Swordsmen": [
+    "검병"
+  ],
+  "Longbowman": [],
+  "Longbowmen": [],
+  "Dark Mage": [],
+  "Dark Mages": [],
+  "Disciple": [],
+  "Disciples": [],
+  "Fanatic": [],
+  "Fanatics": [],
+  "Cannoneer": [],
+  "Cannoneers": [],
+  "Axemaster": [],
+  "Axemasters": [],
+  "Night Assassin": [],
+  "Soulwatcher": [],
+  "Soulwatchers": [],
+  "Empath": [],
+  "Hunter": [],
+  "Hunters": [],
+  "Fairy": [],
+  "Fairies": [],
+  "Sharpshooter": [],
+  "Sharpshooters": [],
+  "Witch": [],
+  "Witches": [],
+  "Witch Queen": [],
+  "Wizard of the Bow": [],
+  "Holy Armour": [],
+  "Spiritual Fire": [],
+  "Life Steal": [],
+  "Hailstorm": [],
+  "Mind Blaze": [],
+  "Divine Journey": [],
+  "Vitalize": [],
+  "Fatigue": [],
+  "Raise Spirits": [],
+  "Mind Twist": []
+}

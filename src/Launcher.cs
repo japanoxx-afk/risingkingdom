@@ -163,7 +163,7 @@ public class Launcher : Form {
         game.Text=String.IsNullOrWhiteSpace(settings.GamePath)?@"C:\Program Files (x86)\Steam\steamapps\common\Rising Kingdoms":settings.GamePath; layout.Controls.Add(PathRow(game));
         layout.Controls.Add(new Label {Text="텍스트 패키지 폴더 (첫 적용 시 설치본에서 자동 생성)",AutoSize=true});
         package.Text=AppPaths.DefaultPackage; layout.Controls.Add(PathRow(package));
-        status.AutoSize=true; status.MaximumSize=new Size(700,0); status.Text="텍스트 한글패치 · 기계번역 초안 + 메뉴·기술명 보정\n메뉴·설명·캠페인 대사·튜토리얼 텍스트 / 전체 문맥 검수 전"; status.ForeColor=Color.FromArgb(240,193,106); layout.Controls.Add(status);
+        status.AutoSize=true; status.MaximumSize=new Size(700,0); status.Text="텍스트 한글패치 · 명칭 직역 및 생산·기술 명령 보정\n메뉴·설명·캠페인 대사·튜토리얼 텍스트 / 전체 문맥 검수 전"; status.ForeColor=Color.FromArgb(240,193,106); layout.Controls.Add(status);
         var screenRow=new FlowLayoutPanel {AutoSize=true,Dock=DockStyle.Fill};
         screenRow.Controls.Add(new Label {Text="화면 모드",AutoSize=true,Margin=new Padding(0,7,8,0)});
         screenMode.DropDownStyle=ComboBoxStyle.DropDownList;screenMode.Width=280;screenMode.ForeColor=Color.Black;screenMode.BackColor=Color.White;

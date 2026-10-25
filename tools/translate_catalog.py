@@ -11,6 +11,7 @@ import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from revise_terminology import literal, load_glossary, revise
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / 'reports' / 'translation-catalog.json'
@@ -84,6 +85,10 @@ MANUAL = {
     'Immortality':'불멸', 'Soul Collector':'영혼 수집자', 'Earthshaker':'대지진', 'Troll Cannon':'트롤 대포',
 }
 
+# Reviewed names take precedence over the original draft's glossary and overrides.
+GLOSSARY.update({k:v for k,v in load_glossary().items() if not TOKEN.search(k)})
+MANUAL.update(load_glossary())
+
 def digest(text):
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
@@ -153,11 +158,14 @@ def main():
         temp.replace(OUTPUT)
     sources=list(dict.fromkeys(by_id.values()))
     pending=[]
+    literal_terms=load_glossary()
     for source in sources:
         clean=source.replace('@','').strip()
         keys=re.findall(r'@([A-Za-z])',source)
         suffix=' ('+' '.join('@'+key for key in keys)+')' if keys else ''
-        if clean in MANUAL:cache[source]=MANUAL[clean]+suffix
+        reviewed=literal(source,literal_terms)
+        if reviewed is not None:cache[source]=reviewed
+        elif clean in MANUAL:cache[source]=MANUAL[clean]+suffix
         elif clean.startswith('Learn ') and clean[6:] in MANUAL:cache[source]=MANUAL[clean[6:]]+' 배우기'+suffix
         elif not re.search('[A-Za-z]',source):cache[source]=source
         elif source.strip() in GLOSSARY:cache[source]=GLOSSARY[source.strip()]
@@ -196,6 +204,7 @@ def main():
         entries[id]={'SourceSha256':digest(source),'Korean':cache[source]}
     state['HotkeyPolicy']=1
     save()
+    revise()
     print(f'Completed {len(entries)} IDs. This is a machine-translation draft, not a reviewed translation.',flush=True)
 
 if __name__=='__main__':main()
