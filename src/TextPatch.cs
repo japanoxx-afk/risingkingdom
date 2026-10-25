@@ -12,7 +12,7 @@ using System.Security.Cryptography;
 
 namespace RisingKingdomsKO {
 public class Translation {public string SourceSha256;public string Korean;}
-public class TranslationSet {public int Schema;public string Method;public Dictionary<string,Translation> Entries;}
+public class TranslationSet {public int Schema;public string Method;public Dictionary<string,Translation> Entries;public string[] EngineEntries;}
 public static class TextPatch {
     static readonly Regex Marker=new Regex(@"\[\[(\d+)\]\]([\s\S]*?)\[\[\]\]",RegexOptions.Compiled);
     static readonly Regex Protected=new Regex(@"#[^#\r\n]+#|%[sdfiuoxX]\d*|%[A-Za-z_][A-Za-z_0-9]*%|</?[^>\r\n]+>|&(?:[A-Za-z]+|#\d+);|\\[nrt]|@[A-Za-z]");
@@ -66,6 +66,15 @@ public static class TextPatch {
         RewritePak(Engine.Child(game,"Packs\\data.pak"),destination,entries,changed);
         RuntimeContracts.ValidatePak(Engine.Child(game,"Packs\\data.pak"),destination);
         AddFile(manifest,game,package,"Packs\\data.pak");
+        if(set.EngineEntries!=null&&set.EngineEntries.Length>0) {
+            string path=Engine.Child(game,Engine.NativeTable);
+            if(File.Exists(path)||Directory.Exists(path))throw new IOException("기존 게임 번역 테이블이 있습니다. 덮어쓰지 않습니다: "+path);
+            byte[] table=NativeLocalization.Build(File.ReadAllBytes(Engine.Child(game,"RK.exe")),set);
+            string output=Engine.Child(package,"files/"+Engine.NativeTable);Directory.CreateDirectory(Path.GetDirectoryName(output));File.WriteAllBytes(output,table);
+            manifest.Files.Add(new PatchFile {Path=Engine.NativeTable,OriginalSha256=new string('0',64),PatchedSha256=Engine.Hash(output),Created=true});
+            foreach(string id in set.EngineEntries)used.Add("exe|"+id);
+            log("실행 파일 내 표시 문구 번역: "+set.EngineEntries.Length+"개 · EXE 원본 유지");
+        }
         foreach(string campaign in new[]{"Darkling Campaign.bfhp","Forester Campaign.bfhp","Human Campaign.bfhp","Tutorial.BFHP"}) {
             string relative="adventures/"+campaign;
             Campaign.Build(game,relative,Engine.Child(package,"files/"+relative),set,used,log);AddFile(manifest,game,package,relative);

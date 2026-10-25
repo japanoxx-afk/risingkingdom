@@ -50,6 +50,16 @@ class TerminologyTests(unittest.TestCase):
                 verified += 1
         self.assertGreater(verified, 100)
 
+    def test_engine_resource_labels_are_in_native_table(self):
+        state = json.loads((ROOT / 'translations/ko.json').read_text('utf-8'))
+        for id, korean in [('1828913', '영광'), ('1811052', '인구'), ('1806962', '보석'), ('1796974', '금')]:
+            self.assertIn(id, state['EngineEntries'])
+            self.assertEqual(state['Entries'][id]['Korean'], korean)
+        for id in ['1783994', '1778642', '1767414', '1759051']:
+            self.assertIn(id, state['EngineEntries'])
+            self.assertRegex(state['Entries'][id]['Korean'], '[가-힣]')
+        self.assertEqual(len(state['EngineEntries']), len(set(state['EngineEntries'])))
+
 
 if __name__ == '__main__':
     unittest.main()

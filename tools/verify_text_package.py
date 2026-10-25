@@ -4,6 +4,7 @@ import json
 import re
 import struct
 import xml.etree.ElementTree as ET
+import hashlib
 from pathlib import Path
 from inspect_bfhp import inspect
 
@@ -63,3 +64,15 @@ for original in (args.game/'Local/Fonts').glob('*.apf'):
     a=ranges(original);b=ranges(patched)
     for key,value in a.items():assert b[key]==value,f'Original glyph changed: {original.name}, {key}'
 print(json.dumps({'changed_text_files':changed,'preserved_other_files':unchanged,'xml_documents_validated':xml_checked,'original_font_ranges_preserved':True}))
+native=args.package/'files/Local/English/game.loc.xml'
+if native.exists():
+    rows=ET.parse(native).getroot().findall('translationtableentry')
+    exe=(args.game/'RK.exe').read_bytes()
+    dictionary=json.loads((Path(__file__).resolve().parents[1]/'translations/ko.json').read_text('utf-8'))
+    assert {r.attrib['id'] for r in rows}==set(dictionary['EngineEntries'])
+    for row in rows:
+        id,source,translated=(row.attrib[k] for k in ['id','original_text','translated_text'])
+        assert b'[['+id.encode()+b']]'+source.encode('cp1252')+b'[[]]' in exe
+        assert hashlib.sha256(source.encode()).hexdigest()==dictionary['Entries'][id]['SourceSha256']
+        assert translated==dictionary['Entries'][id]['Korean']
+    print(json.dumps({'native_engine_strings_validated':len(rows),'native_xml_valid':True}))

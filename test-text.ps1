@@ -29,7 +29,8 @@ foreach ($relative in $relativeFiles) {
     $hashes[$relative] = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
     Copy-Item -LiteralPath $source -Destination (Join-Path $fixture $relative)
 }
-Set-Content -LiteralPath (Join-Path $fixture 'RK.exe') -Value 'Test fixture only; never executed.'
+$exeHash = (Get-FileHash -LiteralPath (Join-Path $Game 'RK.exe') -Algorithm SHA256).Hash
+Copy-Item -LiteralPath (Join-Path $Game 'RK.exe') -Destination (Join-Path $fixture 'RK.exe')
 $launcher = Join-Path $OutputDirectory 'RisingKingdomsLauncher.exe'
 function Invoke-LauncherTest([string]$TestName,[string[]]$Arguments) {
     $stdout = Join-Path $testRoot ($TestName + '.log')
@@ -41,12 +42,15 @@ function Invoke-LauncherTest([string]$TestName,[string[]]$Arguments) {
 }
 Invoke-LauncherTest 'build' @('--build-text',$fixture,(Join-Path $PSScriptRoot 'translations\ko.json'),$package)
 Invoke-LauncherTest 'apply' @('--apply',$fixture,$package)
+if (!(Test-Path -LiteralPath (Join-Path $fixture 'Local\English\game.loc.xml'))) { throw 'Native resource translation missing' }
 foreach ($relative in $relativeFiles) {
     if ((Get-FileHash -LiteralPath (Join-Path $fixture $relative)).Hash -eq $hashes[$relative]) { throw "Patch did not change $relative" }
 }
 Invoke-LauncherTest 'restore' @('--restore',$fixture)
+if (Test-Path -LiteralPath (Join-Path $fixture 'Local\English\game.loc.xml')) { throw 'Native resource translation was not removed' }
+if ((Get-FileHash -LiteralPath (Join-Path $Game 'RK.exe') -Algorithm SHA256).Hash -ne $exeHash -or (Get-FileHash -LiteralPath (Join-Path $fixture 'RK.exe') -Algorithm SHA256).Hash -ne $exeHash) { throw 'Game executable changed' }
 foreach ($relative in $relativeFiles) {
     if ((Get-FileHash -LiteralPath (Join-Path $fixture $relative)).Hash -ne $hashes[$relative]) { throw "Restore failed: $relative" }
     if ((Get-FileHash -LiteralPath (Join-Path $Game $relative)).Hash -ne $installationHashes[$relative]) { throw "Original installation changed: $relative" }
 }
-Write-Host "PASS: PAK/campaign/font copies built, eleven-file install and exact restore. Original installation unchanged. Results: $testRoot"
+Write-Host "PASS: PAK/campaign/font/native translation built, twelve-file install and exact restore. Executable and original installation unchanged. Results: $testRoot"

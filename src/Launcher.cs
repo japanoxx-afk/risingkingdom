@@ -35,7 +35,7 @@ public class Pak {
         }
     }
 }
-public class PatchFile { public string Path; public string OriginalSha256; public string PatchedSha256; }
+public class PatchFile { public string Path; public string OriginalSha256; public string PatchedSha256; public bool Created; }
 public class Manifest {
     public int Schema; public string Version; public bool Complete; public bool KoreanFontVerified;
     public string Scope; public string TranslationMethod; public bool FontFormatVerified; public bool RuntimeVerified;
@@ -43,6 +43,8 @@ public class Manifest {
 }
 public class Backup { public string Game; public List<PatchFile> Files; }
 public static class Engine {
+    public const string NativeTable="Local/English/game.loc.xml";
+    static void ValidateCreated(PatchFile f) {if(f.Created&&(!String.Equals(f.Path.Replace('\\','/'),NativeTable,StringComparison.OrdinalIgnoreCase)||f.OriginalSha256!=new string('0',64)))throw new InvalidDataException("허용되지 않는 신규 번역 파일");}
     public static JavaScriptSerializer Json = new JavaScriptSerializer {MaxJsonLength=int.MaxValue};
     public static string Hash(string path) { using(var s=File.OpenRead(path)) using(var h=SHA256.Create()) return BitConverter.ToString(h.ComputeHash(s)).Replace("-", "").ToLowerInvariant(); }
     public static string Child(string root, string relative) {
@@ -69,6 +71,7 @@ public static class Engine {
         var seen=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach(var f in m.Files) {
             if(f==null || String.IsNullOrEmpty(f.Path)) throw new InvalidDataException("잘못된 파일 항목");
+            ValidateCreated(f);
             string normalized=f.Path.Replace('/','\\');
             if(!seen.Add(normalized) || !(normalized.StartsWith("Local\\",StringComparison.OrdinalIgnoreCase) || normalized.StartsWith("Packs\\",StringComparison.OrdinalIgnoreCase) || normalized.StartsWith("adventures\\",StringComparison.OrdinalIgnoreCase) || normalized.StartsWith("Scenarios\\",StringComparison.OrdinalIgnoreCase)) || Regex.IsMatch(normalized,@"\.(exe|dll|bat|cmd|ps1)$",RegexOptions.IgnoreCase)) throw new InvalidDataException("허용되지 않는 패치 대상: "+normalized);
             if(!Regex.IsMatch(f.OriginalSha256??"", "^[0-9a-f]{64}$") || !Regex.IsMatch(f.PatchedSha256??"", "^[0-9a-f]{64}$")) throw new InvalidDataException("잘못된 SHA-256");
@@ -79,12 +82,17 @@ public static class Engine {
     public static void Install(string game,string package,Action<string> log) {
         ValidateGame(game); var m=LoadPackage(package); string state=State(game);
         if(Directory.Exists(state)) throw new IOException("기존 패치 또는 복구 기록이 있습니다. 먼저 원본 복원을 실행하세요.");
-        foreach(var f in m.Files) if(Hash(Child(game,f.Path))!=f.OriginalSha256) throw new InvalidDataException("원본 버전 불일치: "+f.Path);
+        foreach(var f in m.Files) {
+            string target=Child(game,f.Path);
+            if(f.Created){if(File.Exists(target)||Directory.Exists(target))throw new InvalidDataException("기존 번역 파일을 보존하기 위해 설치를 중단합니다: "+f.Path);}
+            else if(Hash(target)!=f.OriginalSha256)throw new InvalidDataException("원본 버전 불일치: "+f.Path);
+        }
         if(m.Scope=="game-text")RuntimeContracts.ValidatePak(Child(game,"Packs/data.pak"),Child(package,"files/Packs/data.pak"));
         // Finish every backup before changing any game file. A persistent journal enables retry after interruption.
         Directory.CreateDirectory(state);
         File.WriteAllText(System.IO.Path.Combine(state,"backup.json"),Json.Serialize(new Backup {Game=System.IO.Path.GetFullPath(game),Files=m.Files}),Encoding.UTF8);
         foreach(var f in m.Files) {
+            if(f.Created)continue;
             string target=Child(state,"original\\"+f.Path); Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target));
             File.Copy(Child(game,f.Path),target,false);
             if(Hash(target)!=f.OriginalSha256) throw new IOException("백업 검증 실패: "+f.Path);
@@ -95,7 +103,9 @@ public static class Engine {
                 string staged=Child(state,"staged\\"+f.Path); Directory.CreateDirectory(System.IO.Path.GetDirectoryName(staged));
                 File.Copy(Child(System.IO.Path.Combine(package,"files"),f.Path),staged,true);
                 if(Hash(staged)!=f.PatchedSha256) throw new IOException("패치 검증 실패");
-                Replace(staged,Child(game,f.Path)); log("적용: "+f.Path);
+                string target=Child(game,f.Path);
+                if(f.Created){Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target));File.Move(staged,target);}else Replace(staged,target);
+                log("적용: "+f.Path);
             }
             File.WriteAllText(System.IO.Path.Combine(state,"installed"),m.Version,Encoding.UTF8);
         } catch { Restore(game,log); throw; }
@@ -112,12 +122,22 @@ public static class Engine {
         if(b==null || b.Files==null || !String.Equals(b.Game,System.IO.Path.GetFullPath(game),StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("백업 경로 불일치");
         bool ready=File.Exists(Child(state,"ready"));
         foreach(var f in b.Files) {
+            ValidateCreated(f);
+            if(f.Created) {
+                string added=Child(game,f.Path);
+                if(Directory.Exists(added)||(File.Exists(added)&&(!ready||Hash(added)!=f.PatchedSha256)))throw new IOException("외부에서 변경된 번역 파일입니다. 복원을 중단했습니다: "+f.Path);
+                continue;
+            }
             string original=Child(state,"original\\"+f.Path);
             if(ready && (!File.Exists(original)||Hash(original)!=f.OriginalSha256)) throw new IOException("백업 손상: "+f.Path);
             string current=Hash(Child(game,f.Path));
             if(current!=f.OriginalSha256 && (!ready || current!=f.PatchedSha256)) throw new IOException("외부에서 변경된 파일입니다. 복원을 중단했습니다: "+f.Path);
         }
-        foreach(var f in b.Files) if(Hash(Child(game,f.Path))!=f.OriginalSha256) { Replace(Child(state,"original\\"+f.Path),Child(game,f.Path)); log("복원: "+f.Path); }
+        foreach(var f in b.Files) {
+            string target=Child(game,f.Path);
+            if(f.Created){if(File.Exists(target)){File.Delete(target);log("제거: "+f.Path);}continue;}
+            if(Hash(target)!=f.OriginalSha256){Replace(Child(state,"original\\"+f.Path),target);log("복원: "+f.Path);}
+        }
         // Retain originals for manual recovery; move only the verified state directory within this game folder.
         string archived=Child(game,".risingkingdom-ko-backup-"+Guid.NewGuid().ToString("N"));
         Directory.Move(state,archived); log("원본 복원 완료. 백업 보관: "+archived);
@@ -264,6 +284,7 @@ public static class SelfTest {
         ScreenFill.SelfTest();
         GameWindowMode.SelfTest();
         DisplayScaling.SelfTest();
+        NativeLocalization.SelfTest();
         string root=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"rkko-test-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
         string game=System.IO.Path.Combine(root,"game"), pack=System.IO.Path.Combine(root,"pack"); Directory.CreateDirectory(System.IO.Path.Combine(game,"Packs")); Directory.CreateDirectory(System.IO.Path.Combine(pack,"files","Packs"));
         File.WriteAllText(System.IO.Path.Combine(game,"RK.exe"),"fixture"); string original=System.IO.Path.Combine(game,"Packs","data.pak"), changed=System.IO.Path.Combine(pack,"files","Packs","data.pak"); File.WriteAllText(original,"original"); File.WriteAllText(changed,"translated");
@@ -276,6 +297,17 @@ public static class SelfTest {
         File.WriteAllText(original,"external update");Reject(()=>Engine.Restore(game,s=>{}));Check(File.ReadAllText(original)=="external update","외부 변경 보존");File.WriteAllText(original,"translated");
         Engine.Restore(game,s=>{});Check(File.ReadAllText(original)=="original","복원");
         Engine.Install(game,pack,s=>{});File.Delete(System.IO.Path.Combine(Engine.State(game),"installed"));Engine.Restore(game,s=>{});Check(File.ReadAllText(original)=="original","중단 복구");
+        string nativePackage=Engine.Child(pack,"files/"+Engine.NativeTable),nativeGame=Engine.Child(game,Engine.NativeTable);
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(nativePackage));File.WriteAllText(nativePackage,"native translation");
+        m.Files.Add(new PatchFile {Path=Engine.NativeTable,Created=true,OriginalSha256=new string('0',64),PatchedSha256=Engine.Hash(nativePackage)});save();
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(nativeGame));File.WriteAllText(nativeGame,"existing mod");
+        Reject(()=>Engine.Install(game,pack,s=>{}));Check(File.ReadAllText(nativeGame)=="existing mod","기존 번역 테이블 보존");File.Delete(nativeGame);
+        Engine.Install(game,pack,s=>{});Check(File.Exists(nativeGame),"신규 번역 테이블 설치");
+        File.WriteAllText(nativeGame,"external change");Reject(()=>Engine.Restore(game,s=>{}));Check(File.ReadAllText(nativeGame)=="external change","외부 번역 테이블 변경 보존");
+        File.WriteAllText(nativeGame,"native translation");File.Delete(System.IO.Path.Combine(Engine.State(game),"installed"));Engine.Restore(game,s=>{});
+        Check(!File.Exists(nativeGame)&&File.ReadAllText(original)=="original","중단 복구 시 신규 파일 제거");
+        Engine.Install(game,pack,s=>{});File.Delete(nativeGame);Engine.Restore(game,s=>{});Check(File.ReadAllText(original)=="original","이미 제거된 신규 파일 복구");
+        m.Files[1].Path="Local/foreign.xml";save();Reject(()=>Engine.LoadPackage(pack));m.Files[1].Path=Engine.NativeTable;save();
         TextPatch.CheckTokens("Attack %s1 #GetClassInt('A','B')# @A","공격 %s1 #GetClassInt('A','B')# (@A)");
         Reject(()=>TextPatch.CheckTokens("Damage %s1","피해 %s2"));Reject(()=>TextPatch.CheckTokens("@Attack","공격"));Reject(()=>TextPatch.CheckTokens("Damage #GetClassInt('A','B')#","피해 100"));
         File.WriteAllText(System.IO.Path.Combine(root,"PASS.txt"),"PASS: install, restore, interrupted recovery, traversal, incomplete package, corruption, external changes");

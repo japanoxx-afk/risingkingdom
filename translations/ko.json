@@ -1,6 +1,6 @@
 {
   "Schema": 1,
-  "Method": "Machine draft with reviewed literal names and command/sentence corrections",
+  "Method": "Machine draft with reviewed literal names and native engine resource/UI translations",
   "Entries": {
     "3765146": {
       "SourceSha256": "378d83808237a4459f234bbfbf1380fff27049305cb4235819c3091f5856ba5f",
@@ -17689,8 +17689,302 @@
     "adventures/Tutorial.BFHP|Maps/1/Quests.xml|items-name": {
       "SourceSha256": "fb8e7a1a3cb7b25d262793159145759e97eb540a2b61dbbdf8f58841a81cf1a8",
       "Korean": "품목"
+    },
+    "14786": {
+      "SourceSha256": "fdbde5d7357ea9cbafc192c648c9df9dcebf1ab7f250b9d1ff853c0ceafc6ce7",
+      "Korean": "인공지능 초기화 중..."
+    },
+    "397092": {
+      "SourceSha256": "fb8e7a1a3cb7b25d262793159145759e97eb540a2b61dbbdf8f58841a81cf1a8",
+      "Korean": "아이템"
+    },
+    "1528427": {
+      "SourceSha256": "a2aa56b169f3ca7677f59f38ed7565b91f5c6d23ab79e9c3eb3926f47eff199e",
+      "Korean": "\n\n필요 조건:\n"
+    },
+    "1597086": {
+      "SourceSha256": "cc083c5fbd9e0ba728976e1d3bd9996ffffa63ba3561770f221c08346fba4ea5",
+      "Korean": "미니맵 초기화 중..."
+    },
+    "1585138": {
+      "SourceSha256": "11a6767d5674c7e45f7e00dc525762275b3a48491ad6045427d2609cc496c516",
+      "Korean": "완료"
+    },
+    "1564640": {
+      "SourceSha256": "5e81ee1bc4d6bd4e7a005234c2f65cca0f9cd2756f4865eab1a1424523e86764",
+      "Korean": "지도 불러오는 중..."
+    },
+    "1617842": {
+      "SourceSha256": "481a57f7d25e4ec007f6452261fa98268d95078886b345fd50f92136f7b12698",
+      "Korean": "단축키 - "
+    },
+    "1706032": {
+      "SourceSha256": "5118f76d9067edc593d6946b88693cefa6604c7e613111193db118166d4af589",
+      "Korean": "배낭"
+    },
+    "1695630": {
+      "SourceSha256": "fd16c361f7bd27eeda7c528917f4d5423551c09b5431efc5f75a177012d74a44",
+      "Korean": "(주워서 사용)"
+    },
+    "1684666": {
+      "SourceSha256": "add93534eeb463800fe0ed0946048d33636dd2a014fab92e8a37f77ce98c740b",
+      "Korean": "초"
+    },
+    "1674673": {
+      "SourceSha256": "1f6fa6f69d185e6086d04e7330361bf9001a3b8d0ce511171055dc34eb90c1c5",
+      "Korean": "분"
+    },
+    "1649140": {
+      "SourceSha256": "c668bc79aed441269ed13379e9da44493bf8121d642233bd95d27cd2123e6065",
+      "Korean": "\n<center>비용: "
+    },
+    "1656564": {
+      "SourceSha256": "c4cceadb7e60e66ea4e88151fc538dba4ddc742036b9dde47d33f2979c705975",
+      "Korean": "금 %d1"
+    },
+    "1630682": {
+      "SourceSha256": "c7e363e74609b3a4c9eabc5e6ffbb8e373682c11b4f372edd6aeb1187610948a",
+      "Korean": "\n비용 "
+    },
+    "1828913": {
+      "SourceSha256": "d7606a7c36653bd6a6d9b3a88d451191ec1dac3b48750908d78188e54ff969b2",
+      "Korean": "영광"
+    },
+    "1811052": {
+      "SourceSha256": "5b828861aec15d606e690189228b9b0f3af3d1a6048ea5f730935b02a746b699",
+      "Korean": "인구"
+    },
+    "1783994": {
+      "SourceSha256": "63de38f0b0fdcd1283dba5dfd262bd9f83ea64f4457e585de34debf080c61ad1",
+      "Korean": "영광은 시간이 지나거나 소수 종족의 식민지를 정복하면 얻습니다. 점령한 식민지마다 영광을 얻는 추가 방법이 생깁니다. 인구 제한을 늘리고 투사의 능력을 발전시키는 데 필요합니다.\n\n플레이어마다 영광을 최대 7까지 보유할 수 있습니다."
+    },
+    "1778642": {
+      "SourceSha256": "4aee1b420d3987d15a2aa62b3259ed870099f747e0e7615739e212545937120d",
+      "Korean": "현재 인구와 수용 가능한 최대 인구를 표시합니다. 인간과 숲사람은 집을 지어, 다클링은 단계별 개선을 통해 인구 제한을 늘릴 수 있습니다."
+    },
+    "1767414": {
+      "SourceSha256": "40d1962cfbdd85042398dc0b1937cda51dddc50d9c38a3c0b6b7c17a7085ac5c",
+      "Korean": "보석은 물속에 있는 보석 매장지에서 채집합니다. 고급 유닛을 훈련하거나 고급 개선을 하는 데 사용합니다.\n\n플레이어마다 보석을 최대 100까지 보유할 수 있습니다."
+    },
+    "1759051": {
+      "SourceSha256": "13e423e56c23556bc48b29c222613410fda878666802d7fbdfd2dc038e0414fe",
+      "Korean": "금은 금 매장지나 소수 종족의 식민지에서 얻습니다. 중앙 건물도 소량의 금을 제공합니다.\n\n플레이어마다 금을 최대 3000까지 보유할 수 있습니다."
+    },
+    "1845739": {
+      "SourceSha256": "4bad6cff07d217818c512e21b5b33bf51cb09daf95e72f1e2e6e113601b5bd6f",
+      "Korean": "미니맵"
+    },
+    "1851904": {
+      "SourceSha256": "cb49e5f15598877371bf44c710bca0c81702c248267c396a745e346f18f0a5bf",
+      "Korean": "지형 불러오는 중..."
+    },
+    "2365145": {
+      "SourceSha256": "ed1a5a81b8121ad13a8796e7a7eb113f25d5b18b0a3831bae13d697ba5dae38b",
+      "Korean": "마법"
+    },
+    "2358189": {
+      "SourceSha256": "f63ffed10dfe5db8d02d9095712bb05a4536bed31d62ef7cac6753b3abb96f35",
+      "Korean": "마법 공격"
+    },
+    "2342362": {
+      "SourceSha256": "fe31fddcfa85f480209fcc1a423ce62afafc9ffc652da0cfade259f8cf54eff8",
+      "Korean": "폭발"
+    },
+    "2336043": {
+      "SourceSha256": "36ddd4f356e3400cbad3580ff86e83016f078f7fca5c296da8ac9cc18d060fc2",
+      "Korean": "폭발 공격"
+    },
+    "2327070": {
+      "SourceSha256": "05800e70aa10c86f5ab898d18ad6884245a149f3b945bb0bd8cd05a8e469cd27",
+      "Korean": "화살"
+    },
+    "2311311": {
+      "SourceSha256": "fbaa83af7d9fa0d55a2a5670efe3754f9125d7a411fe7fabf164fdea6b34a101",
+      "Korean": "화살 공격"
+    },
+    "2303278": {
+      "SourceSha256": "6659c4ca642045f49ac22d26f1e05d8bdbc2fd6e7698d1f5ee631c2df58b3221",
+      "Korean": "철퇴"
+    },
+    "2292133": {
+      "SourceSha256": "0e16acc8afb6f642e067ca9e2f528a5e0a0ee856ebefca4b91260affcd182067",
+      "Korean": "철퇴 공격"
+    },
+    "2284502": {
+      "SourceSha256": "9e28648fe9d1916c3a92a59b2a6e9a50307d1413a46475d3730454ceb8ab6a57",
+      "Korean": "도끼"
+    },
+    "2272043": {
+      "SourceSha256": "2e8266c0525ad8f7e7398642ad710902a933d630cd7cad5971d400cfa4c8a204",
+      "Korean": "도끼 공격"
+    },
+    "2267807": {
+      "SourceSha256": "b300137c3d8c1e70f644098f23273bcba53e3e605bd42afb509e03a2ea8ba0a8",
+      "Korean": "칼날"
+    },
+    "2256001": {
+      "SourceSha256": "ee47c73a0db98e4ee71667ca6eefcd70263c6221ed056e4cf3cc46d3295818ba",
+      "Korean": "칼날 공격"
+    },
+    "2232854": {
+      "SourceSha256": "743507d6ad4824946cbb6563eda4badeab2d7cdf02b23d00c761805d202eb856",
+      "Korean": "창 공격"
+    },
+    "2220460": {
+      "SourceSha256": "de8d2be353abfb3622e4828a2ca7a3756103a283070e49a1f55fc7d79507326c",
+      "Korean": "맨손"
+    },
+    "2218636": {
+      "SourceSha256": "5214e92bd733e33415924fa51543e7f319544a834b0d3b15cebb3fc4a3f55740",
+      "Korean": "맨손 공격"
+    },
+    "2191130": {
+      "SourceSha256": "87c5912f2cefdf9d7d1913611187fa8ab653a89a8d4b65f574812f899834e8b1",
+      "Korean": "건물"
+    },
+    "2185825": {
+      "SourceSha256": "d3c14d1b10163a8d5481c6f77f0a80aec231273796f9d10695f559664467bc71",
+      "Korean": "건물 방어 유형"
+    },
+    "2171522": {
+      "SourceSha256": "d0dc8a2a8303bf4ac2247fdba2d3b6d040dd15e59ca05f14b1ffb3b9b3140d35",
+      "Korean": "투사"
+    },
+    "2167029": {
+      "SourceSha256": "dbeb086122029696360924285be0427b683dd7adea9ab524b7daa32d5707de72",
+      "Korean": "투사 방어 유형"
+    },
+    "2150482": {
+      "SourceSha256": "81f39eb58b3b88f1cb0f3fb2ffc8d9c7f9df0dfcab6f6d4431239c1fa4acb763",
+      "Korean": "기마"
+    },
+    "2148964": {
+      "SourceSha256": "8b8ab42791db4d5b7a4cab61befbfcf05fcad8d37f4e04707ffead453e76a7a4",
+      "Korean": "기마 방어 유형"
+    },
+    "2134266": {
+      "SourceSha256": "caaba84670559b5bd406e01cb8f8c69eb1306b258197ceed0dd88ba7988dfeb4",
+      "Korean": "중장"
+    },
+    "2126810": {
+      "SourceSha256": "d26228e2d87d221207861fc3c4dbff06bb278f26a016d5abf50a390056a96186",
+      "Korean": "중장갑"
+    },
+    "2111185": {
+      "SourceSha256": "8e588cd187741f1cd76f5fab77b7208782a8c21d764ce7d7a4cf3ac4e0968873",
+      "Korean": "중형"
+    },
+    "2106262": {
+      "SourceSha256": "03168ff1d8cad1071ed82fc1c15ecc2f228a8e608b39f57f0c1666b26e5aeddb",
+      "Korean": "중형 장갑"
+    },
+    "2097957": {
+      "SourceSha256": "dbcd5e7bb7a0f538810de44c3efbd813037ee3fa358747bb71fa58e157af45f7",
+      "Korean": "경장"
+    },
+    "2087939": {
+      "SourceSha256": "2ba285a7e8f66f42902f19b0a7f46a9c55c7eac00c12717f42653a48b05e8c7a",
+      "Korean": "경장갑"
+    },
+    "3121185": {
+      "SourceSha256": "8e588cd187741f1cd76f5fab77b7208782a8c21d764ce7d7a4cf3ac4e0968873",
+      "Korean": "중형"
+    },
+    "3151617": {
+      "SourceSha256": "d4732cda6e35c898a2f310989fb3b60e9e61a50f92f72369851299dc0d2f3484",
+      "Korean": "지도 목표"
+    },
+    "2022787": {
+      "SourceSha256": "71f10eb014cbdf8bd8d800a3e244226b92197ed0137371cddf77f5e18224b1d1",
+      "Korean": "게임 종료"
+    },
+    "2016572": {
+      "SourceSha256": "c1a9bbf5d9a4d514eb1052ceabef1ce72282391ee4593ce1655fa6cf758442b7",
+      "Korean": "패배!"
+    },
+    "2000611": {
+      "SourceSha256": "d32cecd931e0b8acbdc9d8ccc72eccfdb9363121481fa2a346785afa2137c5bb",
+      "Korean": "승리!"
+    },
+    "3703783": {
+      "SourceSha256": "61031baa7f75c623da1bad11e80c36b7a196302cf5dd6b235485a4e8addc5247",
+      "Korean": "클릭하면 이 명령을 취소합니다."
+    },
+    "3693775": {
+      "SourceSha256": "d8a44a8b6e6b945f3cb3ff1b1ed75f6204af55226a40c85ee37cf3709cd3cf48",
+      "Korean": "클릭하면 이 유닛의 훈련을 취소합니다."
+    },
+    "3684339": {
+      "SourceSha256": "1c47a122b4b5b98a111192e7c05e2f96bd2dfce5872c701874adf335095e81ee",
+      "Korean": "클릭하면 이 개선을 취소합니다."
+    },
+    "3754629": {
+      "SourceSha256": "4e0445c4bd44edf241d348abfcecf65d117c5626c5007206526281c77ff109b0",
+      "Korean": "건물"
     }
   },
   "HotkeyPolicy": 1,
-  "TerminologyPolicy": "literal-1"
+  "TerminologyPolicy": "literal-1",
+  "EngineEntries": [
+    "14786",
+    "397092",
+    "1528427",
+    "1597086",
+    "1585138",
+    "1564640",
+    "1617842",
+    "1706032",
+    "1695630",
+    "1684666",
+    "1674673",
+    "1649140",
+    "1656564",
+    "1630682",
+    "1828913",
+    "1811052",
+    "1806962",
+    "1796974",
+    "1783994",
+    "1778642",
+    "1767414",
+    "1759051",
+    "1845739",
+    "1851904",
+    "2365145",
+    "2358189",
+    "2342362",
+    "2336043",
+    "2327070",
+    "2311311",
+    "2303278",
+    "2292133",
+    "2284502",
+    "2272043",
+    "2267807",
+    "2256001",
+    "2232854",
+    "2220460",
+    "2218636",
+    "2191130",
+    "2185825",
+    "2171522",
+    "2167029",
+    "2150482",
+    "2148964",
+    "2134266",
+    "2126810",
+    "2111185",
+    "2106262",
+    "2097957",
+    "2087939",
+    "3121185",
+    "3151617",
+    "2022787",
+    "2016572",
+    "2000611",
+    "3703783",
+    "3693775",
+    "3684339",
+    "3754629"
+  ]
 }

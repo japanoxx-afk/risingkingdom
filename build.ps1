@@ -21,7 +21,7 @@ public const string DictionarySha256 = "$dictionaryHash";
 "@
 $stampPath = Join-Path $OutputDirectory 'BuildInfo.g.cs'
 [IO.File]::WriteAllText($stampPath, $stamp, [Text.UTF8Encoding]::new($false))
-& $compiler /nologo /target:winexe "/resource:$root\src\ScreenFill.conf,RisingKingdomsKO.ScreenFill.conf" /utf8output /out:"$OutputDirectory\RisingKingdomsLauncher.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "$root\src\Launcher.cs" "$root\src\TextPatch.cs" "$root\src\Campaign.cs" "$root\src\Updater.cs" "$root\src\RuntimeContracts.cs" "$root\src\GameMonitor.cs" "$root\src\ScreenFill.cs" "$root\src\GameWindowMode.cs" "$root\src\DisplayScaling.cs" $stampPath
+& $compiler /nologo /target:winexe "/resource:$root\src\ScreenFill.conf,RisingKingdomsKO.ScreenFill.conf" /utf8output /out:"$OutputDirectory\RisingKingdomsLauncher.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "$root\src\Launcher.cs" "$root\src\TextPatch.cs" "$root\src\Campaign.cs" "$root\src\Updater.cs" "$root\src\RuntimeContracts.cs" "$root\src\GameMonitor.cs" "$root\src\ScreenFill.cs" "$root\src\GameWindowMode.cs" "$root\src\DisplayScaling.cs" "$root\src\NativeLocalization.cs" $stampPath
 if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
 if (Test-Path (Join-Path $root 'translations\ko.json')) {
     New-Item -ItemType Directory -Force (Join-Path $OutputDirectory 'translations') | Out-Null
