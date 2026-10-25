@@ -6,13 +6,15 @@
 
 ## 사용법
 
-1. `Launch.cmd`를 더블클릭합니다. 첫 실행 시 Windows 기본 .NET Framework 컴파일러로 빌드합니다. 별도 Python이나 API 키는 필요하지 않습니다.
+1. [최신 배포](https://github.com/japanoxx-afk/risingkingdom/releases/latest)의 ZIP을 풀고 `RisingKingdomsLauncher.exe`를 실행합니다. 소스에서 실행할 때는 `Launch.cmd`를 사용합니다. 별도 Python이나 API 키는 필요하지 않습니다.
 2. 게임 경로를 확인합니다. 기본값: `C:\Program Files (x86)\Steam\steamapps\common\Rising Kingdoms`
 3. **한글패치 적용**을 누릅니다. 설치본의 텍스트를 번역 사전과 대조해 패키지를 로컬로 생성하고, 원본을 백업한 뒤 적용합니다.
 4. **게임 실행**으로 시작합니다. 파일 쓰기 권한이 부족하면 런처를 관리자 권한으로 실행합니다.
 5. **원본 복원**으로 패치 이전 파일을 복구할 수 있습니다.
 
-실행 파일은 `build/RisingKingdomsKO-Text.exe`입니다. 기존 `RisingKingdomsKO.exe`는 초기 조사용 버전이므로 새 파일을 사용하세요. 소스를 업데이트한 뒤에는 `build.ps1`을 다시 실행하세요.
+소스 빌드 실행 파일은 `build/RisingKingdomsLauncher.exe`입니다. v0.4.0부터 실행 시 GitHub의 최신 정식 배포를 자동 확인하며, 새 버전을 검증한 뒤 자동으로 전환합니다. 오프라인이나 업데이트 실패 시 기존 버전으로 계속합니다. 예전 `RisingKingdomsKO.exe`와 `RisingKingdomsKO-Text.exe`에는 이 기능이 없으므로 새 실행 파일을 사용하세요.
+
+런처 버전과 번역 패치 버전은 화면에 각각 표시합니다. 게임 경로와 업데이트 캐시는 `%LOCALAPPDATA%\RisingKingdomsKO`에 저장합니다. 런처가 갱신되어도 게임 파일은 자동 변경하지 않습니다. 새 번역 적용은 **원본 복원 → 한글패치 적용** 순서로 실행합니다. [버전 관리·배포 절차](docs/releases.md)와 [변경 이력](CHANGELOG.md)을 참고하세요.
 
 ## 패치 범위
 
@@ -46,6 +48,7 @@
 
 ```powershell
 ./test.ps1
+./test-update.ps1
 ./test-text.ps1
 ```
 

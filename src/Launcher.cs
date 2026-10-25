@@ -146,31 +146,53 @@ public static class Engine {
 }
 public class Launcher : Form {
     TextBox game=new TextBox(), package=new TextBox(), log=new TextBox(); Label status=new Label();
-    public Launcher() {
-        Text="라이징 킹덤즈 · 한글패치 런처"; Size=new Size(800,650); MinimumSize=new Size(760,620); Font=new Font("맑은 고딕",10); BackColor=Color.FromArgb(24,29,38); ForeColor=Color.Gainsboro;
+    FlowLayoutPanel buttons;
+    bool checkingUpdate;
+    public Launcher(string startupToken=null,bool automaticUpdates=true) {
+        Text="라이징 킹덤즈 · 한글패치 런처 v"+BuildInfo.Version; Size=new Size(800,650); MinimumSize=new Size(760,620); Font=new Font("맑은 고딕",10); BackColor=Color.FromArgb(24,29,38); ForeColor=Color.Gainsboro;
         var layout=new TableLayoutPanel {Dock=DockStyle.Fill,Padding=new Padding(26),ColumnCount=1,RowCount=10}; Controls.Add(layout);
         layout.Controls.Add(new Label {Text="RISING KINGDOMS",Font=new Font("Segoe UI",24,FontStyle.Bold),AutoSize=true});
-        layout.Controls.Add(new Label {Text="한글패치 관리 · 원본 백업 · 복원",AutoSize=true});
+        layout.Controls.Add(new Label {Text="런처 v"+BuildInfo.Version+" · 번역 패치 v"+BuildInfo.PatchVersion,AutoSize=true});
         layout.Controls.Add(new Label {Text="게임 설치 폴더",AutoSize=true});
-        game.Text=@"C:\Program Files (x86)\Steam\steamapps\common\Rising Kingdoms"; layout.Controls.Add(PathRow(game));
+        var settings=AppPaths.LoadSettings();
+        game.Text=String.IsNullOrWhiteSpace(settings.GamePath)?@"C:\Program Files (x86)\Steam\steamapps\common\Rising Kingdoms":settings.GamePath; layout.Controls.Add(PathRow(game));
         layout.Controls.Add(new Label {Text="텍스트 패키지 폴더 (첫 적용 시 설치본에서 자동 생성)",AutoSize=true});
-        package.Text=System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"packages","ko"); layout.Controls.Add(PathRow(package));
+        package.Text=AppPaths.DefaultPackage; layout.Controls.Add(PathRow(package));
         status.AutoSize=true; status.MaximumSize=new Size(700,0); status.Text="텍스트 한글패치 · 기계번역 초안 + 메뉴·기술명 보정\n메뉴·설명·캠페인 대사·튜토리얼 텍스트 / 실제 게임 화면 미검수"; status.ForeColor=Color.FromArgb(240,193,106); layout.Controls.Add(status);
-        var buttons=new FlowLayoutPanel {AutoSize=true,Dock=DockStyle.Fill}; layout.Controls.Add(buttons);
+        buttons=new FlowLayoutPanel {AutoSize=true,Dock=DockStyle.Fill}; layout.Controls.Add(buttons);
         AddButton(buttons,"설치본 조사",()=>Engine.Inspect(game.Text,System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"reports"),Log));
         AddButton(buttons,"한글패치 적용",()=>{
-            if(!File.Exists(System.IO.Path.Combine(package.Text,"manifest.json")))TextPatch.Build(game.Text,System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"translations","ko.json"),package.Text,Log);
+            AppPaths.SaveSettings(game.Text);
+            if(!File.Exists(System.IO.Path.Combine(package.Text,"manifest.json")))TextPatch.Build(game.Text,AppPaths.Dictionary,package.Text,Log);
             var manifest=Engine.LoadPackage(package.Text);Engine.Install(game.Text,package.Text,Log);status.Text="텍스트 패치 적용 완료 · "+manifest.TranslatedStrings+"개 키\n기계번역 초안 / 실제 게임 화면 미검수";
         });
         AddButton(buttons,"원본 복원",()=>{Engine.Restore(game.Text,Log); status.Text="원본 복원 완료";});
         AddButton(buttons,"게임 실행",()=>{Engine.ValidateGame(game.Text); if(Directory.Exists(Engine.State(game.Text))&&!File.Exists(System.IO.Path.Combine(Engine.State(game.Text),"installed"))) throw new IOException("중단된 패치 기록이 있습니다. 먼저 원본 복원을 실행하세요."); Process.Start(new ProcessStartInfo(System.IO.Path.Combine(game.Text,"RK.exe")) {WorkingDirectory=game.Text,UseShellExecute=true});});
+        var updateButton=new Button {Text="업데이트 확인",AutoSize=true,Height=36,BackColor=Color.FromArgb(51,65,83),FlatStyle=FlatStyle.Flat};updateButton.Click+=async(s,e)=>await CheckUpdate();buttons.Controls.Add(updateButton);
         log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical; log.Dock=DockStyle.Fill; log.BackColor=Color.FromArgb(16,20,28); log.ForeColor=Color.Gainsboro; layout.Controls.Add(log);
         layout.RowStyles.Clear(); for(int i=0;i<8;i++)layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));
         layout.Controls.Add(new Label {Text="쓰기 권한 오류가 나면 런처를 관리자 권한으로 실행하세요.",AutoSize=true});
+        if(automaticUpdates) {
+            Shown+=async(s,e)=>{
+                try {
+                    AutoUpdater.MarkStarted(startupToken);
+                    string installed=System.IO.Path.Combine(game.Text,".risingkingdom-ko","installed");
+                    Log(File.Exists(installed)?"게임에 적용된 패치: "+File.ReadAllText(installed):"게임에 적용된 패치 기록 없음");
+                    if(startupToken==null)await CheckUpdate();else Log("자동 업데이트로 시작됨 · v"+BuildInfo.Version);
+                }catch(Exception ex){Log("시작 확인 오류: "+ex.Message);}
+            };
+            FormClosing+=(s,e)=>{try{AppPaths.SaveSettings(game.Text);}catch{}};
+        }
+    }
+    async System.Threading.Tasks.Task CheckUpdate() {
+        if(checkingUpdate)return;checkingUpdate=true;buttons.Enabled=false;
+        try {AppPaths.SaveSettings(game.Text);string directory=await AutoUpdater.CheckAndStage(Log);if(!IsDisposed&&directory!=null&&await AutoUpdater.LaunchUpdated(directory,Log))Close();}
+        catch(Exception ex){Log("업데이트 오류 · 기존 버전으로 계속합니다: "+ex.Message);}
+        finally{if(!IsDisposed)buttons.Enabled=true;checkingUpdate=false;}
     }
     Control PathRow(TextBox box) { var panel=new TableLayoutPanel {ColumnCount=2,Dock=DockStyle.Top,AutoSize=true}; panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,80)); box.Dock=DockStyle.Fill; panel.Controls.Add(box); var browse=new Button {Text="찾아보기",AutoSize=true}; browse.Click+=(s,e)=>{using(var d=new FolderBrowserDialog()){d.SelectedPath=box.Text; if(d.ShowDialog()==DialogResult.OK)box.Text=d.SelectedPath;}}; panel.Controls.Add(browse); return panel; }
     void AddButton(FlowLayoutPanel p,string text,Action action) { var b=new Button {Text=text,AutoSize=true,Height=36,BackColor=Color.FromArgb(51,65,83),FlatStyle=FlatStyle.Flat}; b.Click+=(s,e)=>{UseWaitCursor=true; b.Enabled=false; try{action();}catch(Exception ex){Log("오류: "+ex.Message); MessageBox.Show(this,ex.Message,"작업을 완료하지 못했습니다",MessageBoxButtons.OK,MessageBoxIcon.Warning);}finally{UseWaitCursor=false;b.Enabled=true;}}; p.Controls.Add(b); }
-    void Log(string line) { log.AppendText(DateTime.Now.ToString("HH:mm:ss")+"  "+line+Environment.NewLine); log.Refresh(); }
+    void Log(string line) { if(IsDisposed||log.IsDisposed)return;log.AppendText(DateTime.Now.ToString("HH:mm:ss")+"  "+line+Environment.NewLine); log.Refresh(); }
     [STAThread] public static int Main(string[] args) {
         try {
             if(args.Length==3 && args[0]=="--inspect") {Engine.Inspect(args[1],args[2],Console.WriteLine);return 0;}
@@ -178,8 +200,12 @@ public class Launcher : Form {
             if(args.Length==3 && args[0]=="--apply") {Engine.Install(args[1],args[2],Console.WriteLine);return 0;}
             if(args.Length==2 && args[0]=="--restore") {Engine.Restore(args[1],Console.WriteLine);return 0;}
             if(args.Length==1 && args[0]=="--self-test") {SelfTest.Run();return 0;}
-            if(args.Length==2 && args[0]=="--preview") {Application.EnableVisualStyles(); using(var form=new Launcher()) {form.Show(); Application.DoEvents(); using(var bitmap=new Bitmap(form.Width,form.Height)) {form.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(args[1]);} form.Close();}return 0;}
-            Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false); Application.Run(new Launcher());return 0;
+            if(args.Length==3 && args[0]=="--updater-self-test") {AutoUpdater.SelfTest(args[1],args[2]);return 0;}
+            if(args.Length==4 && args[0]=="--test-handoff") {AutoUpdater.TestHandoff(args[1],args[2],args[3]);return 0;}
+            if(args.Length==1 && args[0]=="--check-updates") {string update=AutoUpdater.CheckAndStage(Console.WriteLine).GetAwaiter().GetResult();Console.WriteLine(update==null?"UPDATE_CHECK_COMPLETE":"STAGED: "+update);return 0;}
+            if(args.Length==2 && args[0]=="--preview") {Application.EnableVisualStyles(); using(var form=new Launcher(null,false)) {form.Show(); Application.DoEvents(); using(var bitmap=new Bitmap(form.Width,form.Height)) {form.DrawToBitmap(bitmap,new Rectangle(0,0,bitmap.Width,bitmap.Height));bitmap.Save(args[1]);} form.Close();}return 0;}
+            string startupToken=args.Length==2&&args[0]=="--updated-start"?args[1]:null;
+            Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false); Application.Run(new Launcher(startupToken));return 0;
         } catch(Exception ex){Console.Error.WriteLine(ex);return 1;}
     }
 }

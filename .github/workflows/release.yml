@@ -1,0 +1,36 @@
+name: Release launcher
+on:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Match tag and source version
+        shell: pwsh
+        run: |
+          $version = Get-Content version.json -Raw | ConvertFrom-Json
+          if ($env:GITHUB_REF_NAME -ne "v$($version.Version)") { throw 'Tag and version.json differ' }
+      - name: Test installer
+        shell: pwsh
+        run: ./test.ps1
+      - name: Package and test updater
+        shell: pwsh
+        run: |
+          ./package-release.ps1 -OutputDirectory "$PWD/artifacts"
+          ./test-update.ps1 -ReleaseDirectory "$PWD/artifacts"
+      - name: Publish verified release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = Get-Content version.json -Raw | ConvertFrom-Json
+          $tag = "v$($version.Version)"
+          gh release create $tag "artifacts/RisingKingdomsKO-$($version.Version)-win.zip" "artifacts/update.json" --verify-tag --draft --title "Rising Kingdoms KO v$($version.Version)" --notes-file artifacts/release-notes.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Release creation failed; existing releases are never overwritten' }
+          gh release edit $tag --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

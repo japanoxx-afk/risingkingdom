@@ -8,13 +8,28 @@ New-Item -ItemType Directory -Force (Join-Path $fixture 'Packs'),(Join-Path $fix
 $relativeFiles = @('Packs\data.pak') + @(Get-ChildItem -LiteralPath (Join-Path $Game 'Local\Fonts') -Filter '*.apf' | ForEach-Object { 'Local\Fonts\' + $_.Name })
 $relativeFiles += @('adventures\Darkling Campaign.bfhp','adventures\Forester Campaign.bfhp','adventures\Human Campaign.bfhp','adventures\Tutorial.BFHP')
 $hashes = @{}
+$installationHashes = @{}
+$backupRoot = Join-Path $Game '.risingkingdom-ko'
+$backup = $null
+if (Test-Path -LiteralPath (Join-Path $backupRoot 'ready')) {
+    $backup = Get-Content -LiteralPath (Join-Path $backupRoot 'backup.json') -Raw | ConvertFrom-Json
+    if ([IO.Path]::GetFullPath($backup.Game) -ne [IO.Path]::GetFullPath($Game)) { throw 'Backup game path mismatch' }
+    Write-Host 'Installed patch detected. Reading verified originals from its backup; the active game stays unchanged.'
+}
 foreach ($relative in $relativeFiles) {
     $source = Join-Path $Game $relative
+    $installationHashes[$relative] = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
+    if ($backup) {
+        $record = @($backup.Files | Where-Object { $_.Path.Replace('/','\') -eq $relative })
+        if ($record.Count -ne 1) { throw "Missing original backup record: $relative" }
+        $source = Join-Path (Join-Path $backupRoot 'original') $relative
+        if ((Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -ne $record[0].OriginalSha256) { throw "Original backup damaged: $relative" }
+    }
     $hashes[$relative] = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
     Copy-Item -LiteralPath $source -Destination (Join-Path $fixture $relative)
 }
 Set-Content -LiteralPath (Join-Path $fixture 'RK.exe') -Value 'Test fixture only; never executed.'
-$launcher = Join-Path $PSScriptRoot 'build\RisingKingdomsKO-Text.exe'
+$launcher = Join-Path $PSScriptRoot 'build\RisingKingdomsLauncher.exe'
 function Invoke-LauncherTest([string]$TestName,[string[]]$Arguments) {
     $stdout = Join-Path $testRoot ($TestName + '.log')
     $stderr = Join-Path $testRoot ($TestName + '-error.log')
@@ -31,6 +46,6 @@ foreach ($relative in $relativeFiles) {
 Invoke-LauncherTest 'restore' @('--restore',$fixture)
 foreach ($relative in $relativeFiles) {
     if ((Get-FileHash -LiteralPath (Join-Path $fixture $relative)).Hash -ne $hashes[$relative]) { throw "Restore failed: $relative" }
-    if ((Get-FileHash -LiteralPath (Join-Path $Game $relative)).Hash -ne $hashes[$relative]) { throw "Original installation changed: $relative" }
+    if ((Get-FileHash -LiteralPath (Join-Path $Game $relative)).Hash -ne $installationHashes[$relative]) { throw "Original installation changed: $relative" }
 }
 Write-Host "PASS: PAK/campaign/font copies built, eleven-file install and exact restore. Original installation unchanged. Results: $testRoot"

@@ -59,7 +59,7 @@ public static class TextPatch {
         string requested=Path.GetFullPath(package);
         package=requested+".building-"+Guid.NewGuid().ToString("N");
         Directory.CreateDirectory(package);
-        var manifest=new Manifest {Schema=1,Version="0.3.0-text-draft",Scope="game-text",TranslationMethod=set.Method,Complete=false,KoreanFontVerified=false,FontFormatVerified=true,RuntimeVerified=false,Files=new List<PatchFile>()};
+        var manifest=new Manifest {Schema=1,Version=BuildInfo.PatchVersion,Scope="game-text",TranslationMethod=set.Method,Complete=false,KoreanFontVerified=false,FontFormatVerified=true,RuntimeVerified=false,Files=new List<PatchFile>()};
         log("텍스트 변환: "+used.Count+"개 ID / "+occurrences+"개 표식");
         string destination=Engine.Child(package,"files\\Packs\\data.pak");Directory.CreateDirectory(Path.GetDirectoryName(destination));
         RewritePak(Engine.Child(game,"Packs\\data.pak"),destination,entries,changed);
