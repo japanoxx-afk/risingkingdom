@@ -11,16 +11,20 @@ public static class ScreenFill {
     public const string Url="https://github.com/dege-diosg/dgVoodoo2/releases/download/v2.87.5/dgVoodoo2_87_5.zip";
     const string ZipHash="5ffde6927f7355ca3fdd5d785b581256a8e6539fa13e395a891ade6ba1040850";
     static readonly string[] LibraryHashes={"d03e2562178db1fcf3493fc0a0b23a465e35c55d73adb3ec095be866cd662704","612a24408a090a3c6f3886557fa18034ee742e94ad0a40ebdf854d2816176c2e","93c534f2d17419ea78f15551f7e0aac78b3c503733a840914fa063708a5afe8e"};
-    static string MakeConfig(int width,int height) {
+    public static readonly string[] Modes={"fullscreen","windowed","native"};
+    public static bool ValidMode(string mode){return Modes.Contains(mode);}
+    static string MakeConfig(int width,int height,string mode="fullscreen") {
+        if(!ValidMode(mode)||mode=="native")throw new ArgumentException("지원하지 않는 화면 모드");
         if(width<640||height<480||width>16384||height>16384)throw new ArgumentOutOfRangeException("화면 해상도");
         string template;
         using(var input=typeof(ScreenFill).Assembly.GetManifestResourceStream("RisingKingdomsKO.ScreenFill.conf"))
         using(var reader=new StreamReader(input,Encoding.ASCII))template=reader.ReadToEnd();
         var values=new System.Collections.Generic.Dictionary<string,string> {
-            {"OutputAPI","d3d11_fl11_0"},{"FullScreenMode","true"},{"ScalingMode","stretched"},
-            {"KeepWindowAspectRatio","false"},{"CaptureMouse","true"},{"DesktopResolution",width+"x"+height},
+            {"OutputAPI","d3d11_fl11_0"},{"FullScreenMode",mode=="fullscreen"?"true":"false"},{"ScalingMode","stretched"},
+            {"KeepWindowAspectRatio",mode=="windowed"?"true":"false"},{"CaptureMouse",mode=="windowed"?"false":"true"},{"DesktopResolution",width+"x"+height},
             {"DeframerSize","0"},{"AppControlledScreenMode","false"},{"dgVoodooWatermark","false"},
-            {"Resolution","unforced"},{"PrimarySurfaceBatchedUpdate","true"},{"CenterAppWindow","true"}
+            {"Resolution","unforced"},{"PrimarySurfaceBatchedUpdate","true"},{"CenterAppWindow","true"},
+            {"DisableAltEnterToToggleScreenMode","true"},{"WindowedAttributes",""}
         };
         foreach(var pair in values)template=System.Text.RegularExpressions.Regex.Replace(template,@"(?m)^"+pair.Key+@"[ \t]*=[^\r\n]*",pair.Key+" = "+pair.Value);
         return template;
@@ -94,9 +98,11 @@ public static class ScreenFill {
         }catch {Disable(root);throw;}
         finally{foreach(string file in staged.Concat(new[]{configTemp}))if(File.Exists(file))File.Delete(file);}
     }
-    public static void Enable(string root) {
+    public static void Enable(string root,string mode="fullscreen") {
+        if(!ValidMode(mode))throw new ArgumentException("지원하지 않는 화면 모드");
+        if(mode=="native"){Disable(root);return;}
         var screen=System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-        Install(root,ReadLibraries(Archive),MakeConfig(screen.Width,screen.Height));
+        Install(root,ReadLibraries(Archive),MakeConfig(screen.Width,screen.Height,mode));
     }
     public static void Disable(string root) {
         if(!File.Exists(Receipt(root)))return;
@@ -123,6 +129,8 @@ public static class ScreenFill {
             string config=MakeConfig(1920,1080);
             if(!Encoding.ASCII.GetString(WindowedConfig(Encoding.ASCII.GetBytes(initial))).Contains("NoSplash=1"))throw new Exception("시작 영상 충돌 방지 실패");
             if(!config.Contains("DesktopResolution = 1920x1080")||!config.Contains("ScalingMode = stretched"))throw new Exception("화면 설정 생성 실패");
+            string windowed=MakeConfig(1920,1080,"windowed");
+            if(!windowed.Contains("FullScreenMode = false")||!windowed.Contains("DisableAltEnterToToggleScreenMode = true"))throw new Exception("화면 모드 전환 설정 실패");
             byte[] fake={1,2,3};Install(root,new[]{fake,fake,fake},config);Install(root,new[]{fake,fake,fake},config);Disable(root);
             if(Names.Any(n=>File.Exists(Path.Combine(root,n)))||File.Exists(Receipt(root)))throw new Exception("화면 설정 복원 실패");
             if(File.ReadAllText(Path.Combine(root,"config.ini"))!=initial)throw new Exception("게임 설정 원본 복원 실패");

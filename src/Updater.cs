@@ -14,13 +14,13 @@ public class ReleaseAsset {public string name;public string browser_download_url
 public class GitHubRelease {public string tag_name;public bool draft;public bool prerelease;public ReleaseAsset[] assets;}
 public class UpdateFile {public string Path;public string Sha256;public long Size;}
 public class UpdateManifest {public int Schema;public string Version;public string AssetName;public string Sha256;public long Size;public List<UpdateFile> Files;}
-public class UserSettings {public string GamePath;public bool? FillScreen;}
+public class UserSettings {public string GamePath;public bool? FillScreen;public string ScreenMode;}
 public static class AppPaths {
     public static string Root {get{return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"RisingKingdomsKO");}}
     public static string Dictionary {get{return Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"translations","ko.json");}}
     public static string DefaultPackage {get{return Path.Combine(Root,"packages",BuildInfo.PatchVersion+"-"+BuildInfo.DictionarySha256.Substring(0,12));}}
     public static UserSettings LoadSettings() {try{return Engine.Json.Deserialize<UserSettings>(File.ReadAllText(Path.Combine(Root,"settings.json"),Encoding.UTF8))??new UserSettings();}catch{return new UserSettings();}}
-    public static void SaveSettings(string game,bool? fillScreen=null) {var settings=LoadSettings();settings.GamePath=game;if(fillScreen.HasValue)settings.FillScreen=fillScreen;Directory.CreateDirectory(Root);AtomicText(Path.Combine(Root,"settings.json"),Engine.Json.Serialize(settings));}
+    public static void SaveSettings(string game,bool? fillScreen=null,string screenMode=null) {var settings=LoadSettings();settings.GamePath=game;if(fillScreen.HasValue)settings.FillScreen=fillScreen;if(screenMode!=null){if(!ScreenFill.ValidMode(screenMode))throw new ArgumentException("잘못된 화면 모드");settings.ScreenMode=screenMode;}Directory.CreateDirectory(Root);AtomicText(Path.Combine(Root,"settings.json"),Engine.Json.Serialize(settings));}
     public static void AtomicText(string path,string text) {
         string temp=path+"."+Guid.NewGuid().ToString("N")+".tmp";
         File.WriteAllText(temp,text,Encoding.UTF8);

@@ -148,7 +148,9 @@ public static class Engine {
 public class Launcher : Form {
     TextBox game=new TextBox(), package=new TextBox(), log=new TextBox(); Label status=new Label();
     FlowLayoutPanel buttons;
-    CheckBox fillScreen=new CheckBox();
+    ComboBox screenMode=new ComboBox();
+    string SelectedScreenMode {get{return ScreenFill.Modes[Math.Max(0,screenMode.SelectedIndex)];}}
+    void SaveLauncherSettings(){AppPaths.SaveSettings(game.Text,SelectedScreenMode!="native",SelectedScreenMode);}
     bool gameRunning;
     bool checkingUpdate;
     public Launcher(string startupToken=null,bool automaticUpdates=true) {
@@ -162,11 +164,17 @@ public class Launcher : Form {
         layout.Controls.Add(new Label {Text="텍스트 패키지 폴더 (첫 적용 시 설치본에서 자동 생성)",AutoSize=true});
         package.Text=AppPaths.DefaultPackage; layout.Controls.Add(PathRow(package));
         status.AutoSize=true; status.MaximumSize=new Size(700,0); status.Text="텍스트 한글패치 · 기계번역 초안 + 메뉴·기술명 보정\n메뉴·설명·캠페인 대사·튜토리얼 텍스트 / 전체 문맥 검수 전"; status.ForeColor=Color.FromArgb(240,193,106); layout.Controls.Add(status);
-        fillScreen.Text="화면 꽉 채우기 (가로·세로 확대 · 첫 사용 시 구성요소 다운로드)"; fillScreen.AutoSize=true; fillScreen.Checked=settings.FillScreen??true; layout.Controls.Add(fillScreen);
+        var screenRow=new FlowLayoutPanel {AutoSize=true,Dock=DockStyle.Fill};
+        screenRow.Controls.Add(new Label {Text="화면 모드",AutoSize=true,Margin=new Padding(0,7,8,0)});
+        screenMode.DropDownStyle=ComboBoxStyle.DropDownList;screenMode.Width=280;screenMode.ForeColor=Color.Black;screenMode.BackColor=Color.White;
+        screenMode.Items.AddRange(new object[]{"전체 화면 (화면 꽉 채우기)","창 모드","게임 기본 설정 (호환 계층 해제)"});
+        string savedMode=ScreenFill.ValidMode(settings.ScreenMode)?settings.ScreenMode:((settings.FillScreen??true)?"fullscreen":"native");
+        screenMode.SelectedIndex=Array.IndexOf(ScreenFill.Modes,savedMode);screenRow.Controls.Add(screenMode);
+        screenRow.Controls.Add(new Label {Text="다음 게임 실행 시 적용",AutoSize=true,Margin=new Padding(0,7,0,0)});layout.Controls.Add(screenRow);
         buttons=new FlowLayoutPanel {AutoSize=true,Dock=DockStyle.Fill}; layout.Controls.Add(buttons);
         AddButton(buttons,"설치본 조사",()=>Engine.Inspect(game.Text,System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"reports"),Log));
         AddButton(buttons,"한글패치 적용",()=>{
-            AppPaths.SaveSettings(game.Text,fillScreen.Checked);
+            SaveLauncherSettings();
             if(!File.Exists(System.IO.Path.Combine(package.Text,"manifest.json")))TextPatch.Build(game.Text,AppPaths.Dictionary,package.Text,Log);
             var manifest=Engine.LoadPackage(package.Text);Engine.Install(game.Text,package.Text,Log);status.Text="텍스트 패치 적용 완료 · "+manifest.TranslatedStrings+"개 키\n기계번역 초안 / 전체 문맥 검수 전";
         });
@@ -185,17 +193,17 @@ public class Launcher : Form {
                     if(startupToken==null)await CheckUpdate();else Log("자동 업데이트로 시작됨 · v"+BuildInfo.Version);
                 }catch(Exception ex){Log("시작 확인 오류: "+ex.Message);}
             };
-            FormClosing+=(s,e)=>{try{AppPaths.SaveSettings(game.Text,fillScreen.Checked);}catch{}};
+            FormClosing+=(s,e)=>{try{SaveLauncherSettings();}catch{}};
         }
     }
     async System.Threading.Tasks.Task CheckUpdate() {
         if(checkingUpdate||gameRunning)return;checkingUpdate=true;buttons.Enabled=false;
-        try {AppPaths.SaveSettings(game.Text,fillScreen.Checked);string directory=await AutoUpdater.CheckAndStage(Log);if(!IsDisposed&&directory!=null&&await AutoUpdater.LaunchUpdated(directory,Log))Close();}
+        try {SaveLauncherSettings();string directory=await AutoUpdater.CheckAndStage(Log);if(!IsDisposed&&directory!=null&&await AutoUpdater.LaunchUpdated(directory,Log))Close();}
         catch(Exception ex){Log("업데이트 오류 · 기존 버전으로 계속합니다: "+ex.Message);}
         finally{if(!IsDisposed)buttons.Enabled=true;checkingUpdate=false;}
     }
     async void StartGame() {
-        if(gameRunning||checkingUpdate)return;gameRunning=true;buttons.Enabled=false;fillScreen.Enabled=false;game.Enabled=false;
+        if(gameRunning||checkingUpdate)return;gameRunning=true;buttons.Enabled=false;screenMode.Enabled=false;game.Enabled=false;
         try {
             string root=game.Text;Engine.ValidateGame(root);string state=Engine.State(root);
             if(Directory.Exists(state)) {
@@ -203,22 +211,24 @@ public class Launcher : Form {
                 try{RuntimeContracts.ValidatePak(Engine.Child(state,"original/Packs/data.pak"),Engine.Child(root,"Packs/data.pak"));}
                 catch(InvalidDataException){throw new InvalidDataException("기존 패치에서 종족 내부 ID 변경을 감지했습니다. 원본 복원 후 최신 한글패치를 적용하세요.");}
             }
-            AppPaths.SaveSettings(root,fillScreen.Checked);
-            if(fillScreen.Checked) {
+            SaveLauncherSettings();
+            string mode=SelectedScreenMode;
+            if(mode!="native") {
                 Log("화면 꽉 채우기 준비 · 공식 dgVoodoo 2.87.5 확인 (첫 사용 시 약 9 MB)");
                 await System.Threading.Tasks.Task.Run(()=>ScreenFill.Download());
-                if(IsDisposed)return;Engine.ValidateGame(root);ScreenFill.Enable(root);
-                Log("화면 꽉 채우기 적용 · 메뉴와 전투 화면을 모니터 크기로 확대합니다.");
+                if(IsDisposed)return;Engine.ValidateGame(root);ScreenFill.Enable(root,mode);
+                Log("화면 모드 적용: "+screenMode.SelectedItem+" · 모드 변경은 게임 재실행 시 적용");
             }else {ScreenFill.Disable(root);Log("화면 확대 해제 · 기본 게임 화면으로 실행합니다.");}
             DateTime started=DateTime.UtcNow;
             using(var process=Process.Start(new ProcessStartInfo(System.IO.Path.Combine(root,"RK.exe")){WorkingDirectory=root,UseShellExecute=false})) {
                 Log("게임 실행 · 종료 상태와 크래시 로그를 확인합니다.");
+                try{await GameWindowMode.Configure(process,mode);}catch(Exception ex){Log("화면 모드 적용 오류: "+ex.Message);}
                 await System.Threading.Tasks.Task.Run(()=>process.WaitForExit());if(IsDisposed)return;
                 string error=GameMonitor.Failure(root,started,process.ExitCode);
                 if(error!=null){Log(error);MessageBox.Show(this,error,"게임 비정상 종료 감지",MessageBoxButtons.OK,MessageBoxIcon.Warning);}else Log("게임 종료 · 종료 코드 "+process.ExitCode);
             }
         }catch(Exception ex){if(!IsDisposed){Log("게임 실행 오류: "+ex.Message);MessageBox.Show(this,ex.Message,"게임 실행",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
-        finally{gameRunning=false;if(!IsDisposed){buttons.Enabled=true;fillScreen.Enabled=true;game.Enabled=true;}}
+        finally{gameRunning=false;if(!IsDisposed){buttons.Enabled=true;screenMode.Enabled=true;game.Enabled=true;}}
     }
     Control PathRow(TextBox box) { var panel=new TableLayoutPanel {ColumnCount=2,Dock=DockStyle.Top,AutoSize=true}; panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,80)); box.Dock=DockStyle.Fill; panel.Controls.Add(box); var browse=new Button {Text="찾아보기",AutoSize=true}; browse.Click+=(s,e)=>{using(var d=new FolderBrowserDialog()){d.SelectedPath=box.Text; if(d.ShowDialog()==DialogResult.OK)box.Text=d.SelectedPath;}}; panel.Controls.Add(browse); return panel; }
     void AddButton(FlowLayoutPanel p,string text,Action action) { var b=new Button {Text=text,AutoSize=true,Height=36,BackColor=Color.FromArgb(51,65,83),FlatStyle=FlatStyle.Flat}; b.Click+=(s,e)=>{UseWaitCursor=true; b.Enabled=false; try{action();}catch(Exception ex){Log("오류: "+ex.Message); MessageBox.Show(this,ex.Message,"작업을 완료하지 못했습니다",MessageBoxButtons.OK,MessageBoxIcon.Warning);}finally{UseWaitCursor=false;b.Enabled=true;}}; p.Controls.Add(b); }
@@ -229,6 +239,8 @@ public class Launcher : Form {
             if(args.Length==4 && args[0]=="--build-text") {TextPatch.Build(args[1],args[2],args[3],Console.WriteLine);return 0;}
             if(args.Length==3 && args[0]=="--apply") {Engine.Install(args[1],args[2],Console.WriteLine);return 0;}
             if(args.Length==2 && args[0]=="--restore") {Engine.ValidateGame(args[1]);ScreenFill.Disable(args[1]);Engine.Restore(args[1],Console.WriteLine);return 0;}
+            if(args.Length==3 && args[0]=="--run-mode") {Engine.ValidateGame(args[1]);if(args[2]!="native")ScreenFill.Download();ScreenFill.Enable(args[1],args[2]);using(var process=Process.Start(new ProcessStartInfo(System.IO.Path.Combine(args[1],"RK.exe")){WorkingDirectory=args[1],UseShellExecute=false})){GameWindowMode.Configure(process,args[2]).GetAwaiter().GetResult();process.WaitForExit();return process.ExitCode;}}
+            if(args.Length==3 && args[0]=="--screen-mode") {Engine.ValidateGame(args[1]);if(args[2]!="native")ScreenFill.Download();ScreenFill.Enable(args[1],args[2]);return 0;}
             if(args.Length==3 && args[0]=="--screen-fill") {Engine.ValidateGame(args[1]);if(args[2]=="on"){ScreenFill.Download();ScreenFill.Enable(args[1]);}else if(args[2]=="off")ScreenFill.Disable(args[1]);else throw new ArgumentException("on/off 필요");return 0;}
             if(args.Length==1 && args[0]=="--self-test") {SelfTest.Run();return 0;}
             if(args.Length==3 && args[0]=="--updater-self-test") {AutoUpdater.SelfTest(args[1],args[2]);return 0;}
