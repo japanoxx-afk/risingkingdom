@@ -6,6 +6,7 @@ if (!$ReleaseDirectory) {
     $ReleaseDirectory = Join-Path $root ('build\updater-test-' + [guid]::NewGuid().ToString('N'))
     & (Join-Path $root 'package-release.ps1') -OutputDirectory $ReleaseDirectory
 }
+$ReleaseDirectory = [IO.Path]::GetFullPath($ReleaseDirectory)
 $manifest = Join-Path $ReleaseDirectory 'update.json'
 $zip = Join-Path $ReleaseDirectory "RisingKingdomsKO-$($version.Version)-win.zip"
 $launcher = Join-Path $ReleaseDirectory 'payload\RisingKingdomsLauncher.exe'

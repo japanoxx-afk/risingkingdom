@@ -1,6 +1,7 @@
-param([string]$Game = 'C:\Program Files (x86)\Steam\steamapps\common\Rising Kingdoms')
+param([string]$Game = 'C:\Program Files (x86)\Steam\steamapps\common\Rising Kingdoms', [string]$OutputDirectory = '')
 $ErrorActionPreference = 'Stop'
-& (Join-Path $PSScriptRoot 'test.ps1')
+if (!$OutputDirectory) { $OutputDirectory = Join-Path $PSScriptRoot 'build' }
+& (Join-Path $PSScriptRoot 'test.ps1') -OutputDirectory $OutputDirectory
 $testRoot = Join-Path $PSScriptRoot ('build\integration-' + [guid]::NewGuid().ToString('N'))
 $fixture = Join-Path $testRoot 'game'
 $package = Join-Path $testRoot 'package'
@@ -29,7 +30,7 @@ foreach ($relative in $relativeFiles) {
     Copy-Item -LiteralPath $source -Destination (Join-Path $fixture $relative)
 }
 Set-Content -LiteralPath (Join-Path $fixture 'RK.exe') -Value 'Test fixture only; never executed.'
-$launcher = Join-Path $PSScriptRoot 'build\RisingKingdomsLauncher.exe'
+$launcher = Join-Path $OutputDirectory 'RisingKingdomsLauncher.exe'
 function Invoke-LauncherTest([string]$TestName,[string[]]$Arguments) {
     $stdout = Join-Path $testRoot ($TestName + '.log')
     $stderr = Join-Path $testRoot ($TestName + '-error.log')
