@@ -80,6 +80,7 @@ public static class Engine {
         ValidateGame(game); var m=LoadPackage(package); string state=State(game);
         if(Directory.Exists(state)) throw new IOException("기존 패치 또는 복구 기록이 있습니다. 먼저 원본 복원을 실행하세요.");
         foreach(var f in m.Files) if(Hash(Child(game,f.Path))!=f.OriginalSha256) throw new InvalidDataException("원본 버전 불일치: "+f.Path);
+        if(m.Scope=="game-text")RuntimeContracts.ValidatePak(Child(game,"Packs/data.pak"),Child(package,"files/Packs/data.pak"));
         // Finish every backup before changing any game file. A persistent journal enables retry after interruption.
         Directory.CreateDirectory(state);
         File.WriteAllText(System.IO.Path.Combine(state,"backup.json"),Json.Serialize(new Backup {Game=System.IO.Path.GetFullPath(game),Files=m.Files}),Encoding.UTF8);
@@ -158,16 +159,16 @@ public class Launcher : Form {
         game.Text=String.IsNullOrWhiteSpace(settings.GamePath)?@"C:\Program Files (x86)\Steam\steamapps\common\Rising Kingdoms":settings.GamePath; layout.Controls.Add(PathRow(game));
         layout.Controls.Add(new Label {Text="텍스트 패키지 폴더 (첫 적용 시 설치본에서 자동 생성)",AutoSize=true});
         package.Text=AppPaths.DefaultPackage; layout.Controls.Add(PathRow(package));
-        status.AutoSize=true; status.MaximumSize=new Size(700,0); status.Text="텍스트 한글패치 · 기계번역 초안 + 메뉴·기술명 보정\n메뉴·설명·캠페인 대사·튜토리얼 텍스트 / 실제 게임 화면 미검수"; status.ForeColor=Color.FromArgb(240,193,106); layout.Controls.Add(status);
+        status.AutoSize=true; status.MaximumSize=new Size(700,0); status.Text="텍스트 한글패치 · 기계번역 초안 + 메뉴·기술명 보정\n메뉴·설명·캠페인 대사·튜토리얼 텍스트 / 전체 문맥 검수 전"; status.ForeColor=Color.FromArgb(240,193,106); layout.Controls.Add(status);
         buttons=new FlowLayoutPanel {AutoSize=true,Dock=DockStyle.Fill}; layout.Controls.Add(buttons);
         AddButton(buttons,"설치본 조사",()=>Engine.Inspect(game.Text,System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"reports"),Log));
         AddButton(buttons,"한글패치 적용",()=>{
             AppPaths.SaveSettings(game.Text);
             if(!File.Exists(System.IO.Path.Combine(package.Text,"manifest.json")))TextPatch.Build(game.Text,AppPaths.Dictionary,package.Text,Log);
-            var manifest=Engine.LoadPackage(package.Text);Engine.Install(game.Text,package.Text,Log);status.Text="텍스트 패치 적용 완료 · "+manifest.TranslatedStrings+"개 키\n기계번역 초안 / 실제 게임 화면 미검수";
+            var manifest=Engine.LoadPackage(package.Text);Engine.Install(game.Text,package.Text,Log);status.Text="텍스트 패치 적용 완료 · "+manifest.TranslatedStrings+"개 키\n기계번역 초안 / 전체 문맥 검수 전";
         });
         AddButton(buttons,"원본 복원",()=>{Engine.Restore(game.Text,Log); status.Text="원본 복원 완료";});
-        AddButton(buttons,"게임 실행",()=>{Engine.ValidateGame(game.Text); if(Directory.Exists(Engine.State(game.Text))&&!File.Exists(System.IO.Path.Combine(Engine.State(game.Text),"installed"))) throw new IOException("중단된 패치 기록이 있습니다. 먼저 원본 복원을 실행하세요."); Process.Start(new ProcessStartInfo(System.IO.Path.Combine(game.Text,"RK.exe")) {WorkingDirectory=game.Text,UseShellExecute=true});});
+        AddButton(buttons,"게임 실행",StartGame);
         var updateButton=new Button {Text="업데이트 확인",AutoSize=true,Height=36,BackColor=Color.FromArgb(51,65,83),FlatStyle=FlatStyle.Flat};updateButton.Click+=async(s,e)=>await CheckUpdate();buttons.Controls.Add(updateButton);
         log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical; log.Dock=DockStyle.Fill; log.BackColor=Color.FromArgb(16,20,28); log.ForeColor=Color.Gainsboro; layout.Controls.Add(log);
         layout.RowStyles.Clear(); for(int i=0;i<8;i++)layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));
@@ -189,6 +190,23 @@ public class Launcher : Form {
         try {AppPaths.SaveSettings(game.Text);string directory=await AutoUpdater.CheckAndStage(Log);if(!IsDisposed&&directory!=null&&await AutoUpdater.LaunchUpdated(directory,Log))Close();}
         catch(Exception ex){Log("업데이트 오류 · 기존 버전으로 계속합니다: "+ex.Message);}
         finally{if(!IsDisposed)buttons.Enabled=true;checkingUpdate=false;}
+    }
+    async void StartGame() {
+        try {
+            string root=game.Text;Engine.ValidateGame(root);string state=Engine.State(root);
+            if(Directory.Exists(state)) {
+                if(!File.Exists(System.IO.Path.Combine(state,"installed")))throw new IOException("중단된 패치 기록이 있습니다. 먼저 원본 복원을 실행하세요.");
+                try{RuntimeContracts.ValidatePak(Engine.Child(state,"original/Packs/data.pak"),Engine.Child(root,"Packs/data.pak"));}
+                catch(InvalidDataException){throw new InvalidDataException("기존 패치에서 종족 내부 ID 변경을 감지했습니다. 원본 복원 후 최신 한글패치를 적용하세요.");}
+            }
+            AppPaths.SaveSettings(root);DateTime started=DateTime.UtcNow;
+            using(var process=Process.Start(new ProcessStartInfo(System.IO.Path.Combine(root,"RK.exe")){WorkingDirectory=root,UseShellExecute=false})) {
+                Log("게임 실행 · 종료 상태와 크래시 로그를 확인합니다.");
+                await System.Threading.Tasks.Task.Run(()=>process.WaitForExit());if(IsDisposed)return;
+                string error=GameMonitor.Failure(root,started,process.ExitCode);
+                if(error!=null){Log(error);MessageBox.Show(this,error,"게임 비정상 종료 감지",MessageBoxButtons.OK,MessageBoxIcon.Warning);}else Log("게임 종료 · 종료 코드 "+process.ExitCode);
+            }
+        }catch(Exception ex){if(!IsDisposed){Log("게임 실행 오류: "+ex.Message);MessageBox.Show(this,ex.Message,"게임 실행",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
     }
     Control PathRow(TextBox box) { var panel=new TableLayoutPanel {ColumnCount=2,Dock=DockStyle.Top,AutoSize=true}; panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,80)); box.Dock=DockStyle.Fill; panel.Controls.Add(box); var browse=new Button {Text="찾아보기",AutoSize=true}; browse.Click+=(s,e)=>{using(var d=new FolderBrowserDialog()){d.SelectedPath=box.Text; if(d.ShowDialog()==DialogResult.OK)box.Text=d.SelectedPath;}}; panel.Controls.Add(browse); return panel; }
     void AddButton(FlowLayoutPanel p,string text,Action action) { var b=new Button {Text=text,AutoSize=true,Height=36,BackColor=Color.FromArgb(51,65,83),FlatStyle=FlatStyle.Flat}; b.Click+=(s,e)=>{UseWaitCursor=true; b.Enabled=false; try{action();}catch(Exception ex){Log("오류: "+ex.Message); MessageBox.Show(this,ex.Message,"작업을 완료하지 못했습니다",MessageBoxButtons.OK,MessageBoxIcon.Warning);}finally{UseWaitCursor=false;b.Enabled=true;}}; p.Controls.Add(b); }
@@ -213,6 +231,8 @@ public static class SelfTest {
     static void Check(bool value,string name){if(!value)throw new Exception("실패: "+name);}
     static void Reject(Action action) {bool rejected=false;try{action();}catch{rejected=true;}Check(rejected,"거부되어야 하는 입력");}
     public static void Run() {
+        RuntimeContracts.SelfTest();
+        GameMonitor.SelfTest();
         string root=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"rkko-test-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
         string game=System.IO.Path.Combine(root,"game"), pack=System.IO.Path.Combine(root,"pack"); Directory.CreateDirectory(System.IO.Path.Combine(game,"Packs")); Directory.CreateDirectory(System.IO.Path.Combine(pack,"files","Packs"));
         File.WriteAllText(System.IO.Path.Combine(game,"RK.exe"),"fixture"); string original=System.IO.Path.Combine(game,"Packs","data.pak"), changed=System.IO.Path.Combine(pack,"files","Packs","data.pak"); File.WriteAllText(original,"original"); File.WriteAllText(changed,"translated");

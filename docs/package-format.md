@@ -19,7 +19,7 @@ ko/
 | 필드 | 의미 |
 | --- | --- |
 | `Schema` | 1 |
-| `Version` | 현재 `0.3.0-text-draft` |
+| `Version` | 현재 `0.3.1-text-draft` |
 | `Scope` | `game-text` |
 | `TranslationMethod` | 기계번역 초안 및 수동 용어 보정 |
 | `TotalStrings`, `TranslatedStrings` | 패키지에 실제 포함한 고유 키 수. 두 값이 같아야 함 |

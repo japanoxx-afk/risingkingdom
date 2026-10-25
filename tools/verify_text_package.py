@@ -44,6 +44,11 @@ def compare(original,patched):
         changed+=1
 
 compare(pak(args.game/'Packs/data.pak'),pak(args.package/'files/Packs/data.pak'))
+original_constants=pak(args.game/'Packs/data.pak')['DATA\\VXCONST.INI']
+patched_constants=pak(args.package/'files/Packs/data.pak')['DATA\\VXCONST.INI']
+def races(text):
+    return re.search(rb'(?ms)^\[Races\].*?(?=^\[)',text)[0]
+assert races(original_constants)==races(patched_constants),'Engine race identifiers changed'
 for name in ['Darkling Campaign.bfhp','Forester Campaign.bfhp','Human Campaign.bfhp','Tutorial.BFHP']:
     a={};b={};inspect(args.game/'adventures'/name,payloads=a);inspect(args.package/'files/adventures'/name,payloads=b);compare(a,b)
 for original in (args.game/'Local/Fonts').glob('*.apf'):

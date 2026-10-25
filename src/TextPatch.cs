@@ -37,6 +37,7 @@ public static class TextPatch {
             string source=Encoding.GetEncoding(1252).GetString(bytes);
             if(!Marker.IsMatch(source))continue;
             Marker.Replace(source,match=>{
+                if(RuntimeContracts.IsIdentifier(entry.Path,source,match.Index))return match.Value;
                 string id=match.Groups[1].Value,text=match.Groups[2].Value;Translation item;
                 if(!set.Entries.TryGetValue(id,out item)||item.SourceSha256!=HashText(text)||item.Korean==null)throw new InvalidDataException("번역이 없거나 원본 버전이 다릅니다. ID: "+id);
                 if(text.Length>0 && item.Korean.Length==0)throw new InvalidDataException("비어 있는 번역: "+id);
@@ -48,7 +49,7 @@ public static class TextPatch {
                 int position=0;
                 foreach(Match m in Marker.Matches(source)) {
                     output.Write(bytes,position,m.Index-position);
-                    byte[] replacement=Encoding.UTF8.GetBytes("[["+m.Groups[1].Value+"]]"+set.Entries[m.Groups[1].Value].Korean+"[[]]");
+                    byte[] replacement=RuntimeContracts.IsIdentifier(entry.Path,source,m.Index)?bytes.Skip(m.Index).Take(m.Length).ToArray():Encoding.UTF8.GetBytes("[["+m.Groups[1].Value+"]]"+set.Entries[m.Groups[1].Value].Korean+"[[]]");
                     output.Write(replacement,0,replacement.Length);position=m.Index+m.Length;
                 }
                 output.Write(bytes,position,bytes.Length-position);changed.Add(entry.Path,output.ToArray());
@@ -63,6 +64,7 @@ public static class TextPatch {
         log("텍스트 변환: "+used.Count+"개 ID / "+occurrences+"개 표식");
         string destination=Engine.Child(package,"files\\Packs\\data.pak");Directory.CreateDirectory(Path.GetDirectoryName(destination));
         RewritePak(Engine.Child(game,"Packs\\data.pak"),destination,entries,changed);
+        RuntimeContracts.ValidatePak(Engine.Child(game,"Packs\\data.pak"),destination);
         AddFile(manifest,game,package,"Packs\\data.pak");
         foreach(string campaign in new[]{"Darkling Campaign.bfhp","Forester Campaign.bfhp","Human Campaign.bfhp","Tutorial.BFHP"}) {
             string relative="adventures/"+campaign;
@@ -77,7 +79,7 @@ public static class TextPatch {
             KoreanFont.Build(font,target,characters);AddFile(manifest,game,package,rel);log("한글 글꼴 생성: "+Path.GetFileName(font)+" / "+characters.Length+"자");
         }
         File.WriteAllText(Path.Combine(package,"manifest.json"),Engine.Json.Serialize(manifest),Encoding.UTF8);
-        Engine.LoadPackage(package);Directory.Move(package,requested);log("텍스트 패키지 생성 완료 (기계번역 초안 / 실제 게임 화면 미검수)");
+        Engine.LoadPackage(package);Directory.Move(package,requested);log("텍스트 패키지 생성 완료 (기계번역 초안 / 전체 문맥 검수 전)");
     }
     static void AddFile(Manifest m,string game,string package,string relative) {m.Files.Add(new PatchFile {Path=relative,OriginalSha256=Engine.Hash(Engine.Child(game,relative)),PatchedSha256=Engine.Hash(Engine.Child(package,"files\\"+relative))});}
     public static void RewritePak(string source,string target,List<Entry> entries,Dictionary<string,byte[]> replacements) {
